@@ -1,9 +1,9 @@
-# RCS Status      : $Id: PrinterFontMetrics.pm,v 1.3 2002-05-04 18:48:44+02 jv Exp $
+# RCS Status      : $Id: PrinterFontMetrics.pm,v 1.5 2002-12-24 18:56:48+01 jv Exp $
 # Author          : Andrew Ford
 # Created On      : March 2001
 # Last Modified By: Johan Vromans
-# Last Modified On: Sat May  4 18:48:08 2002
-# Update Count    : 10
+# Last Modified On: Tue Dec 24 18:56:42 2002
+# Update Count    : 43
 # Status          : Development
 
 ################ Module Preamble ################
@@ -20,7 +20,11 @@ use IO;
 use File::Spec;
 
 use vars qw($VERSION @ISA $AUTOLOAD);
-$VERSION = "0.05";
+$VERSION = "0.07";
+
+use PostScript::FontMetrics;
+use PostScript::StandardEncoding;
+
 @ISA = qw(PostScript::FontMetrics);
 
 # Definitions of the PFM file layout
@@ -58,7 +62,6 @@ my @pfm_header_fields
      'dfBitsPointer', 
      'dfBitsOffset',
   );
-
 
 # The PFM Extension table just contains offsets of other structures
 # and so its members are not entered into the data hash
@@ -111,7 +114,6 @@ my @pfm_ext_metrics_fields
      'etmKernTracks',
     );
 
-
 use constant PFM_PSINFO_OFFSET   => PFM_EXT_METRICS_OFFSET + PFM_EXT_METRICS_LENGTH;
 my @pfm_postscript_info_fields
   = (
@@ -125,26 +127,30 @@ my %pfm_field_map = ( map { $_ => \&_pfm_header }         @pfm_header_fields,
                       map { $_ => \&_pfm_ext_metrics }    @pfm_ext_metrics_fields,
                       map { $_ => \&_pfm_device_section } @pfm_postscript_info_fields );
 
-
 sub new {
     my $class = shift;
     my $font = shift;
-    my $attrs = { error => 'die',
-                  verbose => 0,
-                  trace => 0,
-                  @_ };
-    my $self = { file => $font, _attrs => $attrs };
+    my %atts = ( error => 'die',
+		 verbose => 0, trace => 0, debug => 0,
+		 @_ );
+    my $self = { file => $font };
     bless $self, $class;
 
-    my $debug = $attrs->{debug} = lc($attrs->{debug});
-    my $trace = $attrs->{trace} = $debug || lc($attrs->{trace});
-    my $error = $attrs->{error} = lc($attrs->{error});
-    my $verbose = $attrs->{verbose} = $trace || lc($attrs->{verbose});
+    return $self unless defined $font;
 
-    eval { $self->_loadpfm($verbose) };
+    $self->{debug}   = $atts{debug};
+    $self->{trace}   = $self->{debug} || $atts{trace};
+    $self->{verbose} = $self->{trace} || $atts{verbose};
+
+    my $error = lc($atts{error});
+    $self->{die} = sub {
+	die(@_)     if $error eq "die";
+	warn(@_)    if $error eq "warn";
+    };
+
+    eval { $self->_loadpfm };
     if ( $@ ) {
-        die ($@)  unless $error eq "warn" || $error eq "ignore";
-        warn ($@) unless $error eq "ignore";
+        $self->_die($@);
         return undef;
     }
 
@@ -167,8 +173,8 @@ sub DeviceInfoFields { return @pfm_postscript_info_fields; }
 sub CharWidthData {
     my $self = shift;
     my $char = $self->_pfm_header->{dfFirstChar};
-    require PostScript::StandardEncoding;
-    my $encoding = PostScript::StandardEncoding->array;
+    my $encoding =
+      $self->{encodingvector} ||= PostScript::StandardEncoding->array;
     my $widthdata = {};
     foreach my $width (@{$self->_pfm_extent_table}) {
         my $char = $encoding->[$char++];
@@ -178,17 +184,17 @@ sub CharWidthData {
 }
 
 sub EncodingVector {
-    require PostScript::StandardEncoding;
-    PostScript::Encoding->array;
+    my $self = shift;
+    $self->{encodingvector} ||= PostScript::StandardEncoding->array;
 }
-
 
 sub KernData {
     my $self = shift;
     my $raw_kerndata = $self->_pfm_kerndata;
     my %enc_kerndata;
-    require PostScript::StandardEncoding;
-    my $encoding = PostScript::StandardEncoding->array;
+
+    my $encoding =
+      $self->{encodingvector} ||= PostScript::StandardEncoding->array;
     while (my($pair, $kern) = each(%$raw_kerndata)) {
         my($c1,$c2) = unpack("aa", $pair);
         $enc_kerndata{$encoding->[ord $c1], $encoding->[ord $c2]} = $kern;
@@ -196,29 +202,27 @@ sub KernData {
     return \%enc_kerndata;
 }
 
-
 # _loadpfm just reads the PFM file into memory (as the _rawdata element)
 # The individual file sections are only unpacked as and when they are needed.
 
-sub _loadpfm ($$) {
-    my($self, $verbose) = @_;
+sub _loadpfm ($) {
+    my($self) = @_;
 
     my $fn = $self->{file};
     local *FH;					# font file
     my $sz = $self->{filesize} = -s $fn;        # file size
 
-    open(FH, $fn) || die ("$fn: $!\n");
-    print STDERR ("$fn: Loading PFM file\n") if $verbose;
+    open(FH, $fn) || $self->_die("$fn: $!\n");
+    print STDERR ("$fn: Loading PFM file\n") if $self->{verbose};
     binmode(FH);		# requires a file handle, yuck
 
     # Read in the pfm data.
     my $len = 0;
 
     unless ( ($len = sysread (FH, $self->{_rawdata}, $sz, 0)) == $sz ) {
-        die ("$fn: Expecting $sz bytes, got $len bytes\n");
+        $self->_die("$fn: Expecting $sz bytes, got $len bytes\n");
     }
 }
-
 
 # Return the PFM file Header section (unpacking if necessary)
 
@@ -238,9 +242,8 @@ sub _pfm_header {
     $header;
 }
 
-
 # Unpack the PFM Extension
-    
+
 sub _pfm_extension {
     my $self = shift;
     my $extension = $self->{_pfm_extension} ||= {};
@@ -251,8 +254,7 @@ sub _pfm_extension {
                    substr($self->{_rawdata}, PFM_EXTENSION_OFFSET, PFM_EXTENSION_LENGTH));
     }
     $extension;
-}    
-
+}
 
 # Unpack PFM extended text metrics
 
@@ -276,7 +278,6 @@ sub _pfm_extended_text_metrics {
     $ext_metrics
 }
 
-
 # Unpack the PFM Device Section
 
 sub _pfm_device_section {
@@ -292,7 +293,6 @@ sub _pfm_device_section {
     }
     $psinfo;
 }
-
 
 # Extent table (2 bytes x (1 + dfLastChar - dfFirstChar))
 # location is defined by dfExtentTable field in extension table
@@ -310,8 +310,6 @@ sub _pfm_extent_table {
     }
     $extent_table;
 }
-
-
 
 # Return the raw kern data (unpacking if necessary)
 
@@ -337,13 +335,17 @@ sub _pfm_kerndata {
     $kerndata;
 }
 
-
 sub AUTOLOAD {
     return if $AUTOLOAD =~ /::DESTROY$/;
     die "Undefined subroutine $AUTOLOAD" 
       unless exists $pfm_field_map{$AUTOLOAD};
     my $struct = &{$pfm_field_map{$AUTOLOAD}};
     $struct->{$AUTOLOAD};
+}
+
+sub _die {
+    my ($self, @msg) = @_;
+    $self->{die}->(@msg);
 }
 
 1;
@@ -369,7 +371,6 @@ called C<.pfm> files) to be read and (partly) parsed.  PFM files
 contain information that overlaps with that contained in AFM files and
 can be used with the font files to generate missing AFM files.
 
-
 =head1 CONSTRUCTOR
 
 =over 4
@@ -386,8 +387,11 @@ The constructor will read the file and parse its contents.
 
 =item error => [ 'die' | 'warn' | 'ignore' ]
 
+B<DEPRECATED>. Please use 'eval { ... }' to intercept errors.
+
 How errors must be handled. Default is to call die().
 In any case, new() returns a undefined result.
+Setting 'error' to 'ignore' may cause surprising results.
 
 =item verbose => I<value>
 
@@ -446,9 +450,7 @@ e.g. $kd->{"A","B"}).
 
 This module also inherits methods from PostScript::FontMetrics.
 
-
 =head1 NOTES
-
 
 PFM files contain information that overlaps with AFM files, including
 character widths and kerning pairs.  
@@ -458,8 +460,6 @@ Device Development Kit (DDK) (for Windows 3.1), however I have been
 unable to locate this document.  Details of the structure of PFM were
 gleaned from an Adobe technical note and by examining sample PFM
 files.
-
-
 
 =head1 SEE ALSO
 
@@ -471,8 +471,6 @@ I<Building PFM Files for PostScript-Language CJK Fonts> describes the
 structure of PFM files for CJK files, but the information appears to
 be applicable for western fonts too.
 
-
-
 =back
 
 =head1 AUTHOR
@@ -481,7 +479,6 @@ Andrew Ford, Ford & Mason Ltd <A.Ford@ford-mason.co.uk>
 
 This module draws heavily on the C<PostScript::FontMetrics> module by
 Johan Vromans.
-
 
 =head1 COPYRIGHT and DISCLAIMER
 

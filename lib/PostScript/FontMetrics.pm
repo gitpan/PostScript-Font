@@ -1,9 +1,9 @@
-# RCS Status      : $Id: FontMetrics.pm,v 1.21 2002-11-21 16:41:27+01 jv Exp $
+# RCS Status      : $Id: FontMetrics.pm,v 1.22 2002-12-24 17:48:40+01 jv Exp $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Thu Nov 21 16:41:02 2002
-# Update Count    : 434
+# Last Modified On: Tue Dec 24 17:06:46 2002
+# Update Count    : 464
 # Status          : Released
 
 ################ Module Preamble ################
@@ -19,17 +19,9 @@ use IO;
 use File::Spec;
 
 use vars qw($VERSION);
-$VERSION = "1.04";
-
-# The ttftot42 program is used to extract metrics from True Type fonts.
-use vars qw($ttftot42);
+$VERSION = "1.05";
 
 use constant FONTSCALE => 1000;		# normal value for font design
-
-my $trace;
-my $verbose;
-my $debug;
-my $error;
 
 sub new {
     my $class = shift;
@@ -40,18 +32,21 @@ sub new {
     my $self = { file => $font };
     bless $self, $class;
 
-    $debug = lc($atts{debug});
-    $trace = $debug || lc($atts{trace});
-    $verbose = $trace || lc($atts{verbose});
-    $error = lc($atts{error});
+    return $self unless defined $font;
 
-    $ttftot42 = _getexec ("ttftot42")
-      unless defined $ttftot42;
+    $self->{debug}   = $atts{debug};
+    $self->{trace}   = $self->{debug} || $atts{trace};
+    $self->{verbose} = $self->{trace} || $atts{verbose};
+
+    my $error = lc($atts{error});
+    $self->{die} = sub {
+	die(@_)     if $error eq "die";
+	warn(@_)    if $error eq "warn";
+    };
 
     eval { $self->_loadafm };
     if ( $@ ) {
-	die ($@)  unless $error eq "warn";
-	warn ($@) unless $error eq "ignore";
+	$self->_die($@);
 	return undef;
     }
 
@@ -94,53 +89,52 @@ sub _loadafm ($) {
 
     my $fn = $self->{file};
     my $fh = new IO::File;	# font file
-    my $sz = -s $fn;	# file size
+    my $sz = -s $fn;		# file size
 
-    $fh->open ($fn) || die ("$fn: $!\n");
-    print STDERR ("$fn: Loading AFM file\n") if $verbose;
+    $fh->open ($fn) || $self->_die("$fn: $!\n");
+    print STDERR ("$fn: Loading AFM file\n") if $self->{verbose};
 
     # Read in the afm data.
     my $len = 0;
 
     unless ( ($len = $fh->sysread ($data, 4, 0)) == 4 ) {
-	die ("$fn: Expecting $sz bytes, got $len bytes\n");
+	$self->_die("$fn: Expecting $sz bytes, got $len bytes\n");
     }
 
     $self->{origdataformat} = 'afm';
     if ( $data eq "\0\1\0\0" ) {
-	#### WARNING: This is Unix specific! ####
-	my $cmd = $ttftot42 || $PostScript::Font::ttftot42;
-	my $f = _qtfn($fn);
-	if ( $cmd ) {
-	    $cmd .= " -ac $f 2>>/dev/null |";
-	    print STDERR ("$fn: Extracting metrics from True Type font\n")
-	      if $verbose;
-	}
-	else {
-	    die ("$fn: Cannot extract metrics from True Type font\n");
-	}
-
 	$fh->close;
-	print STDERR ("+ $cmd\n") if $trace;
-	$fh->open ($cmd) || die ("$cmd: $!\n");;
-	$sz = -1;
-	$len = 0;
+	# For the time being, Font::TTF is optional. Be careful.
+	eval {
+	    require PostScript::Font::TTtoType42;
+	};
+	if ( $@ ) {
+	    $self->_die("$fn: Cannot convert True Type font\n");
+	}
+	my $wrapper =
+	  new PostScript::Font::TTtoType42:: ($fn,
+					      verbose => $self->{verbose},
+					      trace   => $self->{trace},
+					      debug   => $self->{debug});
+	$data = ${$wrapper->afm_as_string};
+	$self->{t42wrapper} = $wrapper;
 	$self->{origdataformat} = 'ttf';
     }
-
-    while ( $fh->sysread ($data, 32768, $len) > 0 ) {
-	$len = length ($data);
+    else {
+	while ( $fh->sysread ($data, 32768, $len) > 0 ) {
+	    $len = length ($data);
+	}
+	$fh->close;
+	print STDERR ("Read $len bytes from $fn\n") if $self->{trace};
+	$self->_die("$fn: Expecting $sz bytes, got $len bytes\n")
+	  unless $sz == -1 || $sz == $len;
     }
-    $fh->close;
-    print STDERR ("Read $len bytes from $fn\n") if $trace;
-    die ("$fn: Expecting $sz bytes, got $len bytes\n")
-      unless $sz == -1 || $sz == $len;
 
     # Normalise line endings. Get rid of trailing space as well.
     $data =~ s/\s*\015\012?/\n/g;
 
     if ( $data !~ /StartFontMetrics/ || $data !~ /EndFontMetrics/ ) {
-	die ("$fn: Not a recognizable AFM file\n");
+	$self->_die("$fn: Not a recognizable AFM file\n");
     }
     $self->{data} = $data;
 
@@ -176,12 +170,21 @@ sub _getwidthdata {
     my $self = shift;
     local ($_);
     my %wx;
+    my $dontencode = 1;
     unless ( defined $self->{encodingvector} ) {
+	$dontencode = 0;
 	if ( defined $self->{encodingscheme} ) {
 	    if ( $self->{encodingscheme} eq "AdobeStandardEncoding" ) {
 		require PostScript::StandardEncoding;
 		$self->{encodingvector} =
 		  [ @{PostScript::StandardEncoding->array} ];
+		$dontencode = 1;
+	    }
+	    elsif ( $self->{encodingscheme} eq "ISOLatin1Encoding" ) {
+		require PostScript::ISOLatin1Encoding;
+		$self->{encodingvector} =
+		  [ @{PostScript::ISOLatin1Encoding->array} ];
+		$dontencode = 1;
 	    }
 	    else {
 		$self->{encodingvector} = [];
@@ -200,7 +203,7 @@ sub _getwidthdata {
 	    my ($wx)   = /\bWX\s+(\d+)\s*;/;
 	    $wx{$name} = $wx;
 	    $nglyphs++;
-	    $enc->[$ix] = $name, $nenc++ unless $ix < 0;
+	    $enc->[$ix] = $name, $nenc++ unless $dontencode || $ix < 0;
 	    next;
 	}
 	last if /^EndFontMetrics/;
@@ -209,7 +212,7 @@ sub _getwidthdata {
 	$wx{'.notdef'} = 0;
     }
     print STDERR ($self->FileName, ": Number of glyphs = $nglyphs, ",
-		  "encoded = $nenc\n") if $verbose;
+		  "encoded = $nenc\n") if $self->{verbose};
     $self->{Wx} = \%wx;
     $self;
 }
@@ -266,6 +269,10 @@ sub setEncoding {
 	require PostScript::ISOLatin1Encoding;
 	$enc = [ @{PostScript::ISOLatin1Encoding->array} ];
     }
+    elsif ( $enc eq "ISOLatin9Encoding" ) {
+	require PostScript::ISOLatin9Encoding;
+	$enc = [ @{PostScript::ISOLatin9Encoding->array} ];
+    }
     else {
 	croak ("Invalid encoding vector");
     }
@@ -280,7 +287,7 @@ sub stringwidth {
     my $wx = $self->CharWidthData;
     my $ev = $self->EncodingVector;
     if ( scalar(@{$self->{encodingvector}}) <= 0 ) {
-	die ($self->FileName . ": Missing Encoding\n");
+	$self->_die($self->FileName . ": Missing Encoding\n");
     }
     my $wd = 0;
     foreach ( unpack ("C*", $string) ) {
@@ -297,7 +304,6 @@ sub stringwidth {
 
 sub kstringwidth {
     my ($self, $string, $pt) = @_;
-
     my $wx = $self->CharWidthData;
     my $ev = $self->EncodingVector;
     if ( scalar(@{$self->{encodingvector}}) <= 0 ) {
@@ -307,7 +313,7 @@ sub kstringwidth {
     my $wd = 0;
     my $prev;
     foreach ( unpack ("C*", $string) ) {
-	my $this = $ev->[$_] || '.undef';
+	my $this = $ev->[$_] || '.notdef';
 	$wd += $wx->{$this};
 	if ( defined $prev ) {
 	    my $kw = $kr->{$prev,$this};
@@ -367,7 +373,7 @@ sub kstring {
 	my $kw = $kr->{$prev,$this} || 0;
 	{ local ($^W) = 0;
 	  print STDERR ("$prev $this $kw :$res[-3]:$res[-2]:$res[-1]:\n")
-	    if $debug;
+	    if $self->{debug};
         }
 	# Nothing to kern?
 	if ( defined $ext && $prev eq 'space' ) {
@@ -422,27 +428,6 @@ sub char {
     undef;
 }
 
-sub _qtfn ($) {
-    my $f = shift;
-    $f =~ s/([\\'])/'\\$1'/g;
-    "'".$f."'";
-}
-
-sub _getexec ($) {
-    my ($exec) = @_;
-    foreach ( File::Spec->path ) {
-	if ( -x "$_/$exec" ) {
-	    print STDERR ("Using $_/$exec\n") if $verbose;
-	    return "$_/$exec";
-	}
-	elsif ( -x "$_/$exec.exe" ) {
-	    print STDERR ("Using $_/$exec.exe\n") if $verbose;
-	    return "$_/$exec.exe";
-	}
-    }
-    '';
-}
-
 sub AUTOLOAD {
     # This is adapted from Gisle Aas' Font-AFM 1.17
     no strict 'vars';
@@ -459,6 +444,11 @@ sub AUTOLOAD {
 	$name =~ s/^.*:://;
 	return $_[0]->{lc $name};
     }
+}
+
+sub _die {
+    my ($self, @msg) = @_;
+    $self->{die}->(@msg);
 }
 
 1;
@@ -483,12 +473,8 @@ This package allows Adobe standard font metric files, so called
 C<.afm> files, to be read and (partly) parsed.
 
 True Type fonts are understood as well, their metrics are extracted.
-Currently this requires an external program, I<ttftot42>. This program
-will be used automatically if it can be located in the execution
-C<PATH>. Alternatively, you can set the variable
-C<$PostScript::FontMetrics::ttftot42> (or
-C<$PostScript::Font::ttftot42>) to the name of the actual program. See
-also L<EXTERNAL PROGRAMS>.
+This requires Martin Hosken's Font::TTF package to be installed
+(available on CPAN).
 
 =head1 CONSTRUCTOR
 
@@ -506,8 +492,11 @@ The constructor will read the file and parse its contents.
 
 =item error => [ 'die' | 'warn' | 'ignore' ]
 
+B<DEPRECATED>. Please use 'eval { ... }' to intercept errors.
+
 How errors must be handled. Default is to call die().
 In any case, new() returns a undefined result.
+Setting 'error' to 'ignore' may cause surprising results.
 
 =item verbose => I<value>
 

@@ -1,15 +1,15 @@
 # BasicTypesetter.pm --  Module for basic PostScript typesetting
-# RCS Info        : $Id: BasicTypesetter.pm,v 1.16 2001-04-14 12:46:04+02 jv Exp jv $
+# RCS Info        : $Id: BasicTypesetter.pm,v 1.17 2002-12-24 17:53:18+01 jv Exp $
 # Author          : Johan Vromans
 # Created On      : Sun Jun 18 11:40:12 2000
 # Last Modified By: Johan Vromans
-# Last Modified On: Thu Nov 21 16:55:40 2002
-# Update Count    : 560
+# Last Modified On: Tue Dec 24 16:32:06 2002
+# Update Count    : 577
 # Status          : Unknown, Use with caution!
 
 package PostScript::BasicTypesetter;
 
-$VERSION = "0.02";
+$VERSION = "0.03";
 
 use 5.005;
 use strict;
@@ -18,18 +18,8 @@ use PostScript::ISOLatin1Encoding;
 use Carp;
 use constant FONTSCALE => 1000;
 
-my $trace;
-my $verbose;
-my $debug;
-my $error;
-
 sub _error {
-    if ( $error eq 'die' ) {
-	croak (@_);
-    }
-    else {
-	carp (@_);
-    }
+    croak(@_);
 }
 
 =head1 NAME
@@ -111,15 +101,13 @@ my $def_hyphens = '';
 sub new {
     my $class = shift;
     my $metrics = shift;
-
-    my (%atts) = (error => 'die',
-		  verbose => 0, trace => 0,
-		  @_);
-    $debug = lc($atts{debug});
-    $trace = $debug || lc($atts{trace});
-    $verbose = $trace || lc($atts{verbose});
-    $error = lc($atts{error});
     my $self = {};
+
+    my (%atts) = (verbose => 0, trace => 0, debug => 0,
+		  @_);
+    $self->{debug}   =$atts{debug};
+    $self->{trace}   = $self->{debug} || $atts{trace};
+    $self->{verbose} = $self->{trace} || $atts{verbose};
 
     # Need either a PostScript::FontMetrics object, or a file name.
     if ( UNIVERSAL::isa($metrics, 'PostScript::FontMetrics') ) {
@@ -131,7 +119,7 @@ sub new {
     bless $self, $class;
     $self->{fontsize} = $def_fontsize;
     $self->{lineskip} = $def_lineskip;
-    $self->{hyphens} = $def_hyphens;
+    $self->{hyphens}  = $def_hyphens;
     $self;
 }
 
@@ -219,8 +207,8 @@ according to the specified encoding, and optionally modifies the
 resultant encoding according to the changes vector. The new font will
 get the name of the original font, with C<->I<tag> appended.
 
-C<$baseenc> must be either C<"StandardEncoding"> (default) or
-C<"ISOLatin1Encoding">.
+C<$baseenc> must be either C<"StandardEncoding"> (default),
+C<"ISOLatin1Encoding">, or C<"ISOLatin9Encoding">.
 
 C<$changes>, if specified, must be a reference to a hash. For each key
 of the hash, its ordinal value in the resultant encoding will be set
@@ -251,6 +239,10 @@ sub reencode {
     }
     elsif ( $baseenc eq "ISOLatin1Encoding" ) {
 	$base = PostScript::ISOLatin1Encoding->array;
+    }
+    elsif ( $baseenc eq "ISOLatin9Encoding" ) {
+	require PostScript::ISOLatin9Encoding;
+	$base = PostScript::ISOLatin9Encoding->array;
     }
     else {
 	_error ("Invalid encoding: $baseenc");
@@ -485,13 +477,17 @@ To be used while constructing the PostScript preamble.
 
 sub ps_preamble {
     my $self = shift;
-    <<EOD;
+    my $ret = <<EOD;
 % TJ operator to print typesetinfo vectors.
 /TJ {
   { dup type /stringtype eq { show } { 0 rmoveto } ifelse }
   forall
 } bind def
 EOD
+    if ( defined(&PostScript::ISOLatin9Encoding::ps_vector) ) {
+	$ret .= PostScript::ISOLatin9Encoding::ps_vector();
+    }
+    $ret;
 }
 
 =head2 ps_reencodesub
@@ -518,10 +514,10 @@ vector will be named I<prefix>C<Vec>.
 
 =item base
 
-The base encoding. This should be either C<StandardEncoding> or
-C<ISOLatin1Encoding>. It defaults to the value supplied with a
-preceding C<reencode> call, or C<StandardEncoding> if no such call has
-been issued.
+The base encoding. This should be either C<StandardEncoding>,
+C<ISOLatin1Encoding>m or C<ISOLatin9Encoding>. It defaults to the
+value supplied with a preceding C<reencode> call, or
+C<StandardEncoding> if no such call has been issued.
 
 =item vec
 
@@ -1119,7 +1115,7 @@ sub _ps_simpletextbox {
     my $hyphens = $self->{hyphens};
 
     # Make pattern.
-    $hyphens = "([$hyphens])([^$hyphens\s]+[$hyphens]?)" if $hyphens;
+    $hyphens = "([$hyphens])([^$hyphens\\s]+[$hyphens]?)" if $hyphens;
 
     my @res;
     my $maxwidth = 0;		# max width of textbox
@@ -1244,7 +1240,7 @@ Johan Vromans, Squirrel Consultancy <jvromans@squirrel.nl>
 
 =head1 COPYRIGHT and DISCLAIMER
 
-This program is Copyright 2000 by Squirrel Consultancy. All
+This program is Copyright 2003,2000 by Squirrel Consultancy. All
 rights reserved.
 
 This program is free software; you can redistribute it and/or modify

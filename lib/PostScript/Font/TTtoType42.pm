@@ -1,9 +1,9 @@
-# RCS Status      : $Id: TTtoType42.pm,v 1.5 2002-12-20 18:18:06+01 jv Exp $
+# RCS Status      : $Id: TTtoType42.pm,v 1.6 2002-12-24 17:50:40+01 jv Exp $
 # Author          : Johan Vromans
 # Created On      : Mon Dec 16 18:56:03 2002
 # Last Modified By: Johan Vromans
-# Last Modified On: Fri Dec 20 18:17:17 2002
-# Update Count    : 174
+# Last Modified On: Mon Dec 23 13:50:02 2002
+# Update Count    : 176
 # Status          : Released
 
 ################ Module Preamble ################
@@ -15,7 +15,7 @@ use 5.006;
 use strict;
 use warnings;
 
-our $VERSION = "0.01";
+our $VERSION = "0.02";
 
 use base qw(Font::TTF::Font);
 
@@ -28,12 +28,12 @@ use constant CHUNK => 65534;
 sub new {
     my $class = shift;
     my $font = shift;
-    my (%atts) = (error => 'die',
-		  verbose => 0, trace => 0, debug => 0,
+    my (%atts) = (verbose => 0, trace => 0, debug => 0,
 		  @_);
     my $self = Font::TTF::Font->open($font);
-    $self->{' trace'} = $atts{trace} || $atts{verbose};
-    $self->{' debug'} = $atts{debug} || $atts{trace} || $atts{verbose};
+    $self->{' verbose'} = $atts{verbose};
+    $self->{' trace'}   = $atts{trace} || $self->{verbose};
+    $self->{' debug'}   = $atts{debug} || $self->{trace};
     bless $self, $class;
 }
 

@@ -1,9 +1,9 @@
-# RCS Status      : $Id: FontInfo.pm,v 1.7 2000-02-04 10:32:30+01 jv Exp $
+# RCS Status      : $Id: FontInfo.pm,v 1.10 2002-12-24 18:51:19+01 jv Exp $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Fri Feb  4 10:23:41 2000
-# Update Count    : 44
+# Last Modified On: Tue Dec 24 18:51:13 2002
+# Update Count    : 55
 # Status          : Released
 
 ################ Module Preamble ################
@@ -17,32 +17,35 @@ BEGIN { require 5.005; }
 use IO;
 
 use vars qw($VERSION);
-$VERSION = "1.03";
-
-my $trace;
-my $verbose;
-my $error;
+$VERSION = "1.04";
 
 sub new {
     my $class = shift;
     my $font = shift;
     my (%atts) = (error => 'die',
-		  verbose => 0, trace => 0,
+		  verbose => 0, trace => 0, debug => 0,
 		  @_);
     my $self = { file => $font };
     bless $self, $class;
 
-    $trace = lc($atts{trace});
-    $verbose = $trace || lc($atts{verbose});
-    $error = lc($atts{error});
+    return $self unless defined $font;
+
+    $self->{debug}   = $atts{debug};
+    $self->{trace}   = $self->{debug} || $atts{trace};
+    $self->{verbose} = $self->{trace} || $atts{verbose};
+
+    my $error = lc($atts{error});
+    $self->{die} = sub {
+	die(@_)     if $error eq "die";
+	warn(@_)    if $error eq "warn";
+    };
 
     eval {
 	$self->_loadinfo;
     };
 
     if ( $@ ) {
-	die ($@)  unless $error eq "warn";
-	warn ($@) unless $error eq "ignore";
+	$self->_die($@);
 	return undef;
     }
 
@@ -51,6 +54,7 @@ sub new {
 
 sub FileName	{ my $self = shift; $self->{file};    }
 sub FontName	{ my $self = shift; $self->{name};    }
+sub FullName	{ my $self = shift; $self->{fullname};}
 sub InfoData	{ my $self = shift; $self->{data};    }
 sub FontFamily	{ my $self = shift; $self->{family};  }
 sub Version	{ my $self = shift; $self->{version}; }
@@ -68,8 +72,8 @@ sub _loadinfo ($) {
 	my $fh = new IO::File;	# font file
 	my $sz = -s $fn;	# file size
 
-	$fh->open ($fn) || die ("$fn: $!\n");
-	print STDERR ("$fn: Loading INF file\n") if $verbose;
+	$fh->open ($fn) || $self->_die("$fn: $!\n");
+	print STDERR ("$fn: Loading INF file\n") if $self->{verbose};
 
 	# Read in the inf data.
 	my $len = 0;
@@ -77,19 +81,20 @@ sub _loadinfo ($) {
 	    $len = length ($data);
 	}
 	$fh->close;
-	print STDERR ("Read $len bytes from $fn\n") if $trace;
-	die ("$fn: Expecting $sz bytes, got $len bytes\n") unless $sz == $len;
+	print STDERR ("Read $len bytes from $fn\n") if $self->{trace};
+	$self->_die("$fn: Expecting $sz bytes, got $len bytes\n") unless $sz == $len;
 
 	# Normalise line endings.
 	$data =~ s/\015\012?/\n/g;
 
 	if ( $data !~ /^FontName\s+\(\S+\)$/m ) {
-	    die ("$fn: Not a recognizable INF file\n");
+	    $self->_die("$fn: Not a recognizable INF file\n");
 	}
 
     };
 
     $self->{name}    = $1 if $data =~ /^FontName\s+\((\S+)\)$/mi;
+    $self->{fullname}= $1 if $data =~ /^FullName\s+\((.+?)\)$/mi;
     $self->{family}  = $1 if $data =~ /^FamilyName\s+\((.+)\)$/mi;
     $self->{version} = $1 if $data =~ /^Version\s+\((.+)\)$/mi;
     $self->{pcprefix}= lc($1)
@@ -97,6 +102,11 @@ sub _loadinfo ($) {
     $self->{data}    = $data;
 
     $self;
+}
+
+sub _die {
+    my ($self, @msg) = @_;
+    $self->{die}->(@msg);
 }
 
 1;
@@ -135,8 +145,11 @@ The constructor will read the file and parse its contents.
 
 =item error => [ 'die' | 'warn' | 'ignore' ]
 
+B<DEPRECATED>. Please use 'eval { ... }' to intercept errors.
+
 How errors must be handled. Default is to call die().
 In any case, new() returns a undefined result.
+Setting 'error' to 'ignore' may cause surprising results.
 
 =item verbose => I<value>
 
@@ -162,13 +175,17 @@ information could not be found in the file.
 
 =item FileName
 
-The name of the file, e.g. 'tir_____.afm'.
+The name of the file, e.g. 'tir_____.inf'.
 
 =item FontName
 
 The name of the font, e.g. 'Times-Roman'.
 
-=item FamilyName
+=item FullName
+
+The full name of the font, e.g. 'Times Roman'.
+
+=item FontFamily
 
 The family name of the font, e.g. 'Times'.
 
@@ -192,7 +209,7 @@ Johan Vromans, Squirrel Consultancy <jvromans@squirrel.nl>
 
 =head1 COPYRIGHT and DISCLAIMER
 
-This program is Copyright 2000,1998 by Squirrel Consultancy. All
+This program is Copyright 2003,1998 by Squirrel Consultancy. All
 rights reserved.
 
 This program is free software; you can redistribute it and/or modify

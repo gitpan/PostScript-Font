@@ -1,9 +1,9 @@
-# RCS Status      : $Id: Font.pm,v 1.19 2002-12-20 18:59:12+01 jv Exp $
+# RCS Status      : $Id: Font.pm,v 1.20 2002-12-24 17:46:23+01 jv Exp $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Fri Dec 20 18:50:03 2002
-# Update Count    : 429
+# Last Modified On: Mon Dec 23 21:27:07 2002
+# Update Count    : 449
 # Status          : Released
 
 ################ Module Preamble ################
@@ -20,36 +20,38 @@ use PostScript::StandardEncoding;
 use PostScript::ISOLatin1Encoding;
 
 use vars qw($VERSION);
-$VERSION = "1.02";
+$VERSION = "1.03";
 
 # If you have the t1disasm program, have $t1disasm point to it.
 # This speeds up the glyph fetching.
 use vars qw($t1disasm);
-
-my $trace;
-my $verbose;
-my $error;
 
 sub new {
     my $class = shift;
     my $font = shift;
     my (%atts) = (error => 'die',
 		  format => 'ascii',
-		  verbose => 0, trace => 0,
+		  verbose => 0, trace => 0, debug => 0,
 		  @_);
     my $self = { file => $font };
     bless $self, $class;
 
     return $self unless defined $font;
 
-    $trace = lc($atts{trace});
-    $verbose = $trace || lc($atts{verbose});
-    $error = lc($atts{error});
+    $self->{debug}   = $atts{debug};
+    $self->{trace}   = $self->{debug} || $atts{trace};
+    $self->{verbose} = $self->{trace} || $atts{verbose};
+
+    my $error = lc($atts{error});
+    $self->{die} = sub {
+	die(@_)     if $error eq "die";
+	warn(@_)    if $error eq "warn";
+    };
+
     $atts{format} = "ascii" if lc($atts{format}) eq "pfa";
     $atts{format} = "binary" if lc($atts{format}) eq "pfb";
 
-    $t1disasm = _getexec ("t1disasm")
-      unless defined $t1disasm;
+    $t1disasm = $self->_getexec ("t1disasm") unless defined $t1disasm;
 
     eval {
 
@@ -59,13 +61,13 @@ sub new {
 	$self->{format} = "ascii";
 	if ( lc($atts{format}) eq "asm" ) {
 	    print STDERR ($self->{file}, ": Converting to ASM format\n")
-	      if $verbose;
+	      if $self->{verbose};
 	    $self->{data} = $self->_pfa2asm;
 	    $self->{format} = "asm";
 	}
 	elsif ( lc($atts{format}) eq "binary" ) {
 	    print STDERR ($self->{file}, ": Converting to Binary format\n")
-	      if $verbose;
+	      if $self->{verbose};
 	    $self->{data} = $self->_pfa2pfb;
 	    $self->{format} = "binary";
 	}
@@ -73,9 +75,7 @@ sub new {
     };
 
     if ( $@ ) {
-	return undef if $error eq "ignore";
-	die ($@)     if $error eq "die";
-	warn ($@)    if $error eq "warn";
+	$self->_die($@);
 	return undef;
     }
 
@@ -148,8 +148,8 @@ sub _loadfont ($) {
     my $fh = new IO::File;	# font file
     my $sz = -s $fn;	# file size
 
-    $fh->open ($fn) || die ("$fn: $!\n");
-    print STDERR ("$fn: Loading font file\n") if $verbose;
+    $fh->open ($fn) || $self->_die("$fn: $!\n");
+    print STDERR ("$fn: Loading font file\n") if $self->{verbose};
 
     # Read in the font data.
     my $len = 0;
@@ -157,7 +157,8 @@ sub _loadfont ($) {
 	$len = length ($data);
     }
     $fh->close;
-    die ("$fn: Expecting at least 4 bytes, got ".length($data)." bytes\n")
+    $self->_die("$fn: Expecting at least 4 bytes, got ",
+		length($data), " bytes\n")
       unless length($data) >= 4;
 
     $self->{dataformat} = 'ps';
@@ -167,12 +168,15 @@ sub _loadfont ($) {
 	    require PostScript::Font::TTtoType42;
 	};
 	if ( $@ ) {
-	    die ("$fn: Cannot convert True Type font\n");
+	    $self->_die("$fn: Cannot convert True Type font\n");
+	    return undef;
 	}
 	my $wrapper =
 	  new PostScript::Font::TTtoType42:: ($fn,
-					      verbose => $verbose,
-					      trace => $trace);
+					      verbose => $self->{verbose},
+					      trace   => $self->{trace},
+					      debug   => $self->{debug},
+					     );
 	$type = "t";
 	$data = $wrapper->as_string;
 	$self->{t42wrapper} = $wrapper;
@@ -184,19 +188,20 @@ sub _loadfont ($) {
 	$data = \"$data";		#";
     }
 
-    print STDERR ("Read $len bytes from $fn\n") if $trace;
-    die ("$fn: Expecting $sz bytes, got $len bytes\n")
+    print STDERR ("Read $len bytes from $fn\n") if $self->{trace};
+    $self->_die("$fn: Expecting $sz bytes, got $len bytes\n")
       if $sz > 0 && $sz != $len;
 
     # Convert .pfb encoded font data.
     if ( $$data =~ /^\200[\001-\003]/ ) {
-	print STDERR ("$fn: Converting to ASCII format\n") if $verbose;
+	print STDERR ("$fn: Converting to ASCII format\n") if $self->{verbose};
 	$data = $self->_pfb2pfa ($data);
 	$self->{dataformat} = 'pfa';
     }
     # Otherwise, must be straight PostScript.
     elsif ( $$data !~ /^%!/ ) {
-	die ("$fn: Not a recognizable font file\n");
+	$self->_die("$fn: Not a recognizable font file\n");
+	return undef;
     }
 
     # Normalise line endings.
@@ -275,7 +280,7 @@ sub _pfb2pfa ($;$) {
     my $bin = "";		# accumulated unprocessed binary segments
     my $addbin = sub {		# binary segment processor
 	print STDERR ("Processing binary segment, ",
-		      length($bin), " bytes\n") if $trace;
+		      length($bin), " bytes\n") if $self->{trace};
 	($bin = uc (unpack ("H*", $bin))) =~ s/(.{64})/$1\n/g;
 	$newdata .= $bin;
 	$newdata .= "\n" unless $newdata =~ /\n$/;
@@ -288,7 +293,7 @@ sub _pfb2pfa ($;$) {
 	last if $$data =~ /^\200\003/; # EOF indicator
 
 	# Get font segment.
-	die ($self->{file}, ": Invalid font segment format\n")
+	$self->_die($self->{file}, ": Invalid font segment format\n")
 	  unless ($type, $info) = $$data =~ /^\200([\001-\002])(....)/s;
 
 	my $len = unpack ("V", $info);
@@ -300,12 +305,12 @@ sub _pfb2pfa ($;$) {
 	if ( ord($type) == 1 ) {	# ASCII segment
 	    $addbin->() if $bin ne "";
 	    print STDERR ($self->{file}, ": ASCII segment, $len bytes\n")
-	      if $trace;
+	      if $self->{trace};
 	    $newdata .= $seg;
 	}
 	else { # ord($type) == 2	# Binary segment
 	    print STDERR ($self->{file}, ": Binary segment, $len bytes\n")
-	      if $trace;
+	      if $self->{trace};
 	    $bin .= $seg;
 	}
     }
@@ -350,10 +355,11 @@ sub _pfa2asm ($;$) {
 	#### WARNING: This is Unix specific! ####
 	my $cmd = "$t1disasm $fn";
 	if ( $self->{type} eq 't' ) {
-	    die ($self->{file}, ": Logic error -- Cannot convert True Type font\n");
+	    $self->_die($self->{file},
+			": Logic error -- Cannot convert True Type font\n");
 	}
 
-	print STDERR ("+ $cmd |\n") if $trace;
+	print STDERR ("+ $cmd |\n") if $self->{trace};
 	my $fh = new IO::File ("$cmd |");
 	local ($/);
 	my $newdata = <$fh>;
@@ -413,7 +419,7 @@ sub _getglyphnames ($;$) {
     my ($self, $data) = @_;
     my @glyphs = ();
 
-    print STDERR ($self->{file}, ": Getting glyph info\n") if $verbose;
+    print STDERR ($self->{file}, ": Getting glyph info\n") if $self->{verbose};
 
     $data = $self->{data} unless defined $data;
 
@@ -421,7 +427,7 @@ sub _getglyphnames ($;$) {
 	my $g = $self->{t42wrapper}->glyphnames;
 	print STDERR ($self->{file}, ": Number of glyphs = ",
 		      scalar(@$g), "\n")
-	  if $verbose;
+	  if $self->{verbose};
 	return $g;
     }
 
@@ -448,8 +454,9 @@ sub _getglyphnames ($;$) {
 	push (@glyphs, $2);
     }
 
-    print STDERR ($self->{file}, ": Number of glyphs = ", scalar(@glyphs), "\n")
-      if $verbose;
+    print STDERR ($self->{file}, ": Number of glyphs = ",
+		  scalar(@glyphs), "\n")
+      if $self->{verbose};
 
     \@glyphs;
 }
@@ -458,7 +465,8 @@ sub _getencoding ($;$) {
     my ($self, $data) = @_;
     my @glyphs = ();
 
-    print STDERR ($self->{file}, ": Getting encoding info\n") if $verbose;
+    print STDERR ($self->{file}, ": Getting encoding info\n")
+      if $self->{verbose};
 
     $data = $self->{data} unless defined $data;
     $data = $$data;		# deref
@@ -510,18 +518,23 @@ sub _getencoding ($;$) {
 }
 
 sub _getexec ($) {
-    my ($exec) = @_;
+    my ($self, $exec) = @_;
     foreach ( File::Spec->path ) {
 	if ( -x "$_/$exec" ) {
-	    print STDERR ("Using $_/$exec\n") if $verbose;
+	    print STDERR ("Using $_/$exec\n") if $self->{verbose};
 	    return "$_/$exec";
 	}
 	elsif ( -x "$_/$exec.exe" ) {
-	    print STDERR ("Using $_/$exec.exe\n") if $verbose;
+	    print STDERR ("Using $_/$exec.exe\n") if $self->{verbose};
 	    return "$_/$exec.exe";
 	}
     }
     ''
+}
+
+sub _die {
+    my ($self, @msg) = @_;
+    $self->{die}->(@msg);
 }
 
 1;
@@ -571,8 +584,11 @@ The constructor will read the file and parse its contents.
 
 =item error => [ 'die' | 'warn' | 'ignore' ]
 
+B<DEPRECATED>. Please use 'eval { ... }' to intercept errors.
+
 How errors must be handled. Default is to call die().
 In any case, new() returns a undefined result.
+Setting 'error' to 'ignore' may cause surprising results.
 
 =item format => [ 'ascii' | 'pfa' | 'binary' | 'pfb' ]
 
