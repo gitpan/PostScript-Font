@@ -1,3 +1,16 @@
+Version 1.05
+------------
+
+  * Fix PostScript::PseudoISO::prepstr to handle \240 to retain
+    spaces.
+
+  * Fix PostScript::FontMetrics to allow a dash in glyph names.
+
+Version 1.04
+------------
+
+  * Minor bugfixes.
+
 Version 1.03
 ------------
 
