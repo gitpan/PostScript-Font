@@ -1,8 +1,11 @@
+This is version 1.00_01 of the PostScript::Font modules.
+NOTE: Version numbers with an underscore denote experimental releases!
+
 This package contains a couple of modules to get information from
-PostScript fonts and associated metrics files. Also included is a
-program to make font samples, and programs to handle the conversion of
-PostScript fonts from binary (.pfb) format to ASCII (.pfa) format, and
-vice versa.
+PostScript fonts, True Type fonts, and associated metrics files. Also
+included is a program to make font samples, and programs to handle the
+conversion of PostScript fonts from binary (.pfb) format to ASCII
+(.pfa) format, and vice versa.
 
 Modules:
 
@@ -13,12 +16,24 @@ Modules:
 			of glyphs.
 			Font types 1 and 42 are supported; types 2, 3
 			and 5 are usually handled as well.
+			TrueType fonts are internally converted to
+			Type42 fonts, using an external conversion
+			tool (not included).
+
+   PostScript::Resources - get information from Unix PostScript Resource files
+
+			.UPR files specify where font metrics files
+			and outline programs can be found for fonts.
 
    PostScript::FontMetrics - get information from Adobe Font Metrics file
 
 			Information includes the font name, font
 			family name, encoding vector, width and
 			kerning tables.
+
+			A example program is provided that shows how
+			to use the metrics for basic typesetting of
+			PostScript texts.
 
    PostScript::FontInfo - get information from Windows .INF files
 
@@ -47,6 +62,9 @@ type:
     perl Makefile.PL
     make all
     make install
+
+For a True Type to Type42 conversion tool, see 
+http://ftp.giga.or.at/pub/nih/ttftot42
 
 ----------------------------------------------------------------------------
 Johan Vromans                                           jvromans@squirrel.nl
