@@ -1,9 +1,9 @@
-# RCS Status      : $Id: FontMetrics.pm,v 1.14 2000-02-04 10:32:30+01 jv Exp $
+# RCS Status      : $Id: FontMetrics.pm,v 1.16 2000-06-23 09:00:33+02 jv Exp $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Fri Feb  4 10:23:18 2000
-# Update Count    : 412
+# Last Modified On: Fri Jun 23 08:29:12 2000
+# Update Count    : 417
 # Status          : Released
 
 ################ Module Preamble ################
@@ -19,10 +19,12 @@ use IO;
 use File::Spec;
 
 use vars qw($VERSION);
-$VERSION = "1.01";
+$VERSION = "1.02";
 
 # The ttftot42 program is used to extract metrics from True Type fonts.
 use vars qw($ttftot42);
+
+use constant FONTSCALE => 1000;		# normal value for font design
 
 my $trace;
 my $verbose;
@@ -177,8 +179,9 @@ sub _getwidthdata {
     unless ( defined $self->{encodingvector} ) {
 	if ( defined $self->{encodingscheme} ) {
 	    if ( $self->{encodingscheme} eq "AdobeStandardEncoding" ) {
+		require PostScript::StandardEncoding;
 		$self->{encodingvector} =
-		  [ @{PostScript::Font::StandardEncoding()} ];
+		  [ @{PostScript::StandardEncoding->array} ];
 	    }
 	    else {
 		$self->{encodingvector} = [];
@@ -275,7 +278,7 @@ sub stringwidth {
     if ( defined $pt ) {
 	carp ("Using a PointSize argument to stringwidth is deprecated")
 	  if $^W;
-	$wd *= $pt / 1000;
+	$wd *= $pt / FONTSCALE;
     }
     $wd;
 }
@@ -303,7 +306,7 @@ sub kstringwidth {
     if ( defined $pt ) {
 	carp ("Using a PointSize argument to kstringwidth is deprecated")
 	  if $^W;
-	$wd *= $pt / 1000;
+	$wd *= $pt / FONTSCALE;
     }
     $wd;
 }
@@ -347,7 +350,7 @@ sub kstring {
 	    next;
 	}
 
-	# Get the glypha name and kern value.
+	# Get the glyph name and kern value.
 	my $this = $ev->[ord($_)] || '.undef';
 	my $kw = $kr->{$prev,$this} || 0;
 	{ local ($^W) = 0;

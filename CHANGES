@@ -1,3 +1,18 @@
+Version 1.03
+------------
+
+  * New module: PostScript::BasicTypesetter.
+    This module provides the necessary tools to do basic
+    typesetting.
+
+  * New example/btexample.pl; shows how to use BasicTypesetter.
+    (Additional: times.upr, time0000.afm and time0003.afm.)
+
+  * Split off the encodings in two separate modules:
+    PostScript::ISOLatin1Encoding and PostScript::StandardEncoding.
+    This eliminates the need for FontMetrics related programs to
+    require Font.pm, just for the encodings.
+
 Version 1.02
 ------------
 

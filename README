@@ -1,8 +1,15 @@
 This package contains a couple of modules to get information for and
 from PostScript fonts and associated metrics files. Also included is a
-program to make font samples, and programs to handle the conversion of
-font data to PostScript binary (.pfb) and ASCII (.pfa) formats. An
-example program shows how basic typesetting can be obtained.
+module to facilitate basic typesetting, a program to make font
+samples, and programs to handle the conversion of font data to
+PostScript binary (.pfb) and ASCII (.pfa) formats. Example program
+shows how basic typesetting can be obtained.
+
+** WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING **
+**                                                                     **
+** This is a pre-release. The APIs may change before the final release **
+**                                                                     **
+** WARNING *** WARNING *** WARNING *** WARNING *** WARNING *** WARNING **
 
 Modules:
 
@@ -40,6 +47,14 @@ Modules:
 			Information includes the font name, font
 			family name and PC filename prefix.
 
+   PostScript::BasicTypesetter - tools for basic typesetting
+
+			This module contains functions to do basic
+			typesetting, like setting paragraphs of text
+			using different fonts, styles, and alignments
+			(left, right, center and justified). All with
+			kerning applied.
+
 Programs:
 
    fontsampler        - makes detailed or concise sample pages of fonts
@@ -73,7 +88,7 @@ AVAILABILITY
 
 (web-page) http://www.squirrel.nl/people/jvromans/software.html
 (download) http://www.perl.com/CPAN/authors/id/JV/
-           Archive name: PostScript-Font-1.01.tar.gz
+           Archive name: PostScript-Font-1.03.tar.gz
 
 For a TrueType to Type42 conversion tool, see 
            http://ftp.giga.or.at/pub/nih/ttftot42

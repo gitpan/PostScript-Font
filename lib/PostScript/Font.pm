@@ -1,9 +1,9 @@
-# RCS Status      : $Id: Font.pm,v 1.14 2000-05-07 13:21:38+02 jv Exp $
+# RCS Status      : $Id: Font.pm,v 1.15 2000-06-21 15:23:44+02 jv Exp $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Sun May  7 13:21:16 2000
-# Update Count    : 368
+# Last Modified On: Wed Jun 21 15:23:15 2000
+# Update Count    : 373
 # Status          : Released
 
 ################ Module Preamble ################
@@ -16,78 +16,16 @@ BEGIN { require 5.005; }
 
 use IO;
 use File::Spec;
+use PostScript::StandardEncoding;
+use PostScript::ISOLatin1Encoding;
 
 use vars qw($VERSION);
-$VERSION = "1.01";
+$VERSION = "1.02";
 
 # If you have the t1disasm program, have $t1disasm point to it.
 # This speeds up the glyph fetching.
 # The ttftot42 is used to convert True Type fonts to Type 42.
 use vars qw($t1disasm $ttftot42);
-
-# Adobe StandardEncoding.
-my @StandardEncoding;
-my $StandardEncoding =
-  ".notdef .notdef .notdef .notdef .notdef .notdef .notdef .notdef ".
-  ".notdef .notdef .notdef .notdef .notdef .notdef .notdef .notdef ".
-  ".notdef .notdef .notdef .notdef .notdef .notdef .notdef .notdef ".
-  ".notdef .notdef .notdef .notdef .notdef .notdef .notdef .notdef ".
-  "space exclam quotedbl numbersign dollar percent ampersand quoteright ".
-  "parenleft parenright asterisk plus comma hyphen period slash zero ".
-  "one two three four five six seven eight nine colon semicolon less ".
-  "equal greater question at A B C D E F G H I J K L M N O P Q R S T U ".
-  "V W X Y Z bracketleft backslash bracketright asciicircum underscore ".
-  "quoteleft a b c d e f g h i j k l m n o p q r s t u v w x y z ".
-  "braceleft bar braceright asciitilde .notdef .notdef .notdef .notdef ".
-  ".notdef .notdef .notdef .notdef .notdef .notdef .notdef .notdef ".
-  ".notdef .notdef .notdef .notdef .notdef .notdef .notdef .notdef ".
-  ".notdef .notdef .notdef .notdef .notdef .notdef .notdef .notdef ".
-  ".notdef .notdef .notdef .notdef .notdef .notdef exclamdown cent ".
-  "sterling fraction yen florin section currency quotesingle ".
-  "quotedblleft guillemotleft guilsinglleft guilsinglright fi fl ".
-  ".notdef endash dagger daggerdbl periodcentered .notdef paragraph ".
-  "bullet quotesinglbase quotedblbase quotedblright guillemotright ".
-  "ellipsis perthousand .notdef questiondown .notdef grave acute ".
-  "circumflex tilde macron breve dotaccent dieresis .notdef ring ".
-  "cedilla .notdef hungarumlaut ogonek caron emdash .notdef .notdef ".
-  ".notdef .notdef .notdef .notdef .notdef .notdef .notdef .notdef ".
-  ".notdef .notdef .notdef .notdef .notdef .notdef AE .notdef ".
-  "ordfeminine .notdef .notdef .notdef .notdef Lslash Oslash OE ".
-  "ordmasculine .notdef .notdef .notdef .notdef .notdef ae .notdef ".
-  ".notdef .notdef dotlessi .notdef .notdef lslash oslash oe germandbls ".
-  ".notdef .notdef .notdef .notdef";
-
-# Adobe ISOLatin1Encoding.
-my @ISOLatin1Encoding;
-my $ISOLatin1Encoding =
-  ".notdef .notdef .notdef .notdef .notdef .notdef .notdef .notdef ".
-  ".notdef .notdef .notdef .notdef .notdef .notdef .notdef .notdef ".
-  ".notdef .notdef .notdef .notdef .notdef .notdef .notdef .notdef ".
-  ".notdef .notdef .notdef .notdef .notdef .notdef .notdef .notdef ".
-  "space exclam quotedbl numbersign dollar percent ampersand quoteright ".
-  "parenleft parenright asterisk plus comma minus period slash zero one ".
-  "two three four five six seven eight nine colon semicolon less equal ".
-  "greater question at A B C D E F G H I J K L M N O P Q R S T U V W X ".
-  "Y Z bracketleft backslash bracketright asciicircum underscore ".
-  "quoteleft a b c d e f g h i j k l m n o p q r s t u v w x y z ".
-  "braceleft bar braceright asciitilde .notdef .notdef .notdef .notdef ".
-  ".notdef .notdef .notdef .notdef .notdef .notdef .notdef .notdef ".
-  ".notdef .notdef .notdef .notdef .notdef dotlessi grave acute ".
-  "circumflex tilde macron breve dotaccent dieresis .notdef ring ".
-  "cedilla .notdef hungarumlaut ogonek caron space exclamdown cent ".
-  "sterling currency yen brokenbar section dieresis copyright ".
-  "ordfeminine guillemotleft logicalnot hyphen registered macron degree ".
-  "plusminus twosuperior threesuperior acute mu paragraph ".
-  "periodcentered cedilla onesuperior ordmasculine guillemotright ".
-  "onequarter onehalf threequarters questiondown Agrave Aacute ".
-  "Acircumflex Atilde Adieresis Aring AE Ccedilla Egrave Eacute ".
-  "Ecircumflex Edieresis Igrave Iacute Icircumflex Idieresis Eth Ntilde ".
-  "Ograve Oacute Ocircumflex Otilde Odieresis multiply Oslash Ugrave ".
-  "Uacute Ucircumflex Udieresis Yacute Thorn germandbls agrave aacute ".
-  "acircumflex atilde adieresis aring ae ccedilla egrave eacute ".
-  "ecircumflex edieresis igrave iacute icircumflex idieresis eth ntilde ".
-  "ograve oacute ocircumflex otilde odieresis divide oslash ugrave ".
-  "uacute ucircumflex udieresis yacute thorn ydieresis";
 
 my $trace;
 my $verbose;
@@ -177,24 +115,20 @@ sub EncodingVector {
     return $enc if ref($enc) eq "ARRAY";
     # Return private copy for the standard encodings.
     if ( $enc eq "StandardEncoding" ) {
-	return StandardEncoding();
+	return scalar PostScript::StandardEncoding->array;
     }
     elsif ( $enc eq "ISOLatin1Encoding" ) {
-	return ISOLatin1Encoding();
+	return scalar PostScript::ISOLatin1Encoding->array;
     }
     undef;
 }
 
 sub StandardEncoding {
-    @StandardEncoding = split(' ', $StandardEncoding)
-      unless @StandardEncoding;
-    \@StandardEncoding;
+    return scalar PostScript::StandardEncoding->array;
 }
 
 sub ISOLatin1Encoding {
-    @ISOLatin1Encoding = split(' ', $ISOLatin1Encoding)
-      unless @ISOLatin1Encoding;
-    \@ISOLatin1Encoding;
+    return scalar PostScript::ISOLatin1Encoding->array;
 }
 
 sub _loadfont ($) {
@@ -526,10 +460,10 @@ sub _getencoding ($;$) {
 	$enc =~ s/^\s+//;
 	$enc =~ s/\s+$//;
 	$enc =~ s/\s+/ /g;
-	if ( $enc eq $StandardEncoding ) {
+	if ( $enc eq PostScript::StandardEncoding->string ) {
 	    $enc = "StandardEncoding"
 	}
-	elsif ( $enc eq $ISOLatin1Encoding ) {
+	elsif ( $enc eq PostScript::ISOLatin1Encoding->string ) {
 	    $enc = "ISOLatin1Encoding"
 	}
 	else {
@@ -546,10 +480,10 @@ sub _getencoding ($;$) {
 	while ( $enc =~ m;dup (\d+)\s*/(\S+) put;g ) {
 	    $enc[$1] = $2;
 	}
-	if ( "@enc" eq $StandardEncoding ) {
+	if ( "@enc" eq PostScript::StandardEncoding->string ) {
 	    $enc = "StandardEncoding"
 	}
-	elsif ( "@enc" eq $ISOLatin1Encoding ) {
+	elsif ( "@enc" eq PostScript::ISOLatin1Encoding->string ) {
 	    $enc = "ISOLatin1Encoding"
 	}
 	else {
@@ -756,10 +690,16 @@ fonts do not require disassembly to get at the glyph list.
 Returns a reference to an array that contains all the glyphs names for
 Adobe's Standard Encoding.
 
+If this is the only thing you want from this module, use
+C<PostScript::StandardEncoding> instead.
+
 =item ISOLatin1Encoding
 
 Returns a reference to an array that contains all the glyphs names for
 ISO-8859-1 (ISO Latin-1) encoding.
+
+If this is the only thing you want from this module, use
+C<PostScript::ISOLatin1Encoding> instead.
 
 =back
 
