@@ -6,8 +6,8 @@ print "1..9\n";
 # Author          : Johan Vromans
 # Created On      : Thu May 13 15:59:04 1999
 # Last Modified By: Johan Vromans
-# Last Modified On: Tue Oct 19 21:45:59 1999
-# Update Count    : 199
+# Last Modified On: Sat Oct 30 19:00:02 1999
+# Update Count    : 200
 # Status          : Unknown, Use with caution!
 
 ################ Common stuff ################
@@ -106,6 +106,9 @@ print OUT <<EOD;
 %%DocumentProvidedResources: font $fontname
 %%EndComments
 %%BeginProlog
+%%BeginResource: font $fontname
+${\$fontinfo->FontData}
+%%EndResource
 % TJ operator to print typesetinfo vectors.
 % Requires Fpt to be defined!
 /TJ {
@@ -122,9 +125,6 @@ print OUT <<EOD;
 definefont
 % show right-aligned string
 /rshow { dup stringwidth pop neg 0 rmoveto show } bind def
-%%BeginResource: font $fontname
-${\$fontinfo->FontData}
-%%EndResource
 %%EndProlog
 %%BeginSetup
 %%EndSetup

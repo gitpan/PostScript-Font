@@ -4,22 +4,6 @@
 %%DocumentProvidedResources: font CharterBT-Roman
 %%EndComments
 %%BeginProlog
-% TJ operator to print typesetinfo vectors.
-% Requires Fpt to be defined!
-/TJ {
-  { dup type /stringtype eq { show } { Fpt mul 0 rmoveto } ifelse }
-  forall
-} bind def
-% Latin1 reencoding of CharterBT-Roman.
-/CharterBT-Roman-Latin1
-  /CharterBT-Roman findfont
-  30 dict begin
-  { 1 index /FID eq { pop pop } { def } ifelse} forall
-  /Encoding ISOLatin1Encoding def
-  currentdict end
-definefont
-% show right-aligned string
-/rshow { dup stringwidth pop neg 0 rmoveto show } bind def
 %%BeginResource: font CharterBT-Roman
 %!PS-AdobeFont-1.0: CharterBT-Roman 003.001
 %%CreationDate: Tue Jun 23 04:10:28 1992
@@ -1090,6 +1074,22 @@ F650
 cleartomark
 
 %%EndResource
+% TJ operator to print typesetinfo vectors.
+% Requires Fpt to be defined!
+/TJ {
+  { dup type /stringtype eq { show } { Fpt mul 0 rmoveto } ifelse }
+  forall
+} bind def
+% Latin1 reencoding of CharterBT-Roman.
+/CharterBT-Roman-Latin1
+  /CharterBT-Roman findfont
+  30 dict begin
+  { 1 index /FID eq { pop pop } { def } ifelse} forall
+  /Encoding ISOLatin1Encoding def
+  currentdict end
+definefont
+% show right-aligned string
+/rshow { dup stringwidth pop neg 0 rmoveto show } bind def
 %%EndProlog
 %%BeginSetup
 %%EndSetup

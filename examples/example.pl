@@ -1,11 +1,11 @@
 #!/usr/local/bin/perl -w
-my $RCS_Id = '$Id: example.pl,v 1.2 1999-09-24 15:29:53+02 jv Exp $ ';
+my $RCS_Id = '$Id: example.pl,v 1.3 1999-10-30 19:01:26+02 jv Exp $ ';
 
 # Author          : Johan Vromans
 # Created On      : Thu May 13 15:59:04 1999
 # Last Modified By: Johan Vromans
-# Last Modified On: Fri Sep 24 14:48:21 1999
-# Update Count    : 194
+# Last Modified On: Sat Oct 30 18:59:45 1999
+# Update Count    : 195
 # Status          : Unknown, Use with caution!
 
 ################ Common stuff ################
@@ -92,6 +92,9 @@ print STDOUT <<EOD;
 %%DocumentProvidedResources: font $fontname
 %%EndComments
 %%BeginProlog
+%%BeginResource: font $fontname
+${\$fontinfo->FontData}
+%%EndResource
 % TJ operator to print typesetinfo vectors.
 % Requires Fpt to be defined!
 /TJ {
@@ -108,9 +111,6 @@ print STDOUT <<EOD;
 definefont
 % show right-aligned string
 /rshow { dup stringwidth pop neg 0 rmoveto show } bind def
-%%BeginResource: font $fontname
-${\$fontinfo->FontData}
-%%EndResource
 %%EndProlog
 %%BeginSetup
 %%EndSetup

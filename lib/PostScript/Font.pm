@@ -1,10 +1,10 @@
-# RCS Status      : $Id: Font.pm,v 1.11 1999-10-19 21:34:06+02 jv Exp $
+# RCS Status      : $Id: Font.pm,v 1.13 2000-02-04 10:32:30+01 jv Exp $
 # Author          : Johan Vromans
-# Created On      : December 1999
+# Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Tue Oct 19 21:32:58 1999
-# Update Count    : 356
-# Status          : Looks okay
+# Last Modified On: Fri Feb  4 10:23:08 2000
+# Update Count    : 362
+# Status          : Released
 
 ################ Module Preamble ################
 
@@ -18,7 +18,7 @@ use IO;
 use File::Spec;
 
 use vars qw($VERSION);
-$VERSION = "1.00_02";
+$VERSION = "1.01";
 
 # If you have the t1disasm program, have $t1disasm point to it.
 # This speeds up the glyph fetching.
@@ -186,13 +186,13 @@ sub EncodingVector {
 
 sub StandardEncoding {
     @StandardEncoding = split(' ', $StandardEncoding)
-      unless defined @StandardEncoding;
+      unless @StandardEncoding;
     \@StandardEncoding;
 }
 
 sub ISOLatin1Encoding {
     @ISOLatin1Encoding = split(' ', $ISOLatin1Encoding)
-      unless defined @ISOLatin1Encoding;
+      unless @ISOLatin1Encoding;
     \@ISOLatin1Encoding;
 }
 
@@ -832,7 +832,7 @@ Johan Vromans, Squirrel Consultancy <jvromans@squirrel.nl>
 
 =head1 COPYRIGHT and DISCLAIMER
 
-This program is Copyright 1993,1999 by Squirrel Consultancy. All
+This program is Copyright 2000,1998 by Squirrel Consultancy. All
 rights reserved.
 
 This program is free software; you can redistribute it and/or modify

@@ -1,13 +1,18 @@
-This is version 1.00_02 of the PostScript::Font modules.
-NOTE: Version numbers with an underscore denote experimental releases!
-
-This package contains a couple of modules to get information from
-PostScript fonts, True Type fonts, and associated metrics files. Also
-included is a program to make font samples, and programs to handle the
-conversion of PostScript fonts from binary (.pfb) format to ASCII
-(.pfa) format, and vice versa.
+This package contains a couple of modules to get information for and
+from PostScript fonts and associated metrics files. Also included is a
+program to make font samples, and programs to handle the conversion of
+font data to PostScript binary (.pfb) and ASCII (.pfa) formats. An
+example program shows how basic typesetting can be obtained.
 
 Modules:
+
+   PostScript::Resources - fetch info from Unix PostScript Resource files
+
+			Unix PostScript Resource (.upr) files are the
+			Adobe specified way of defining PostScript
+			resources on Unix systems. Using .upr files,
+			font names and families are associated with
+			their metrics and outline data.
 
    PostScript::Font   - get information from a PostScript font file
 
@@ -19,11 +24,6 @@ Modules:
 			TrueType fonts are internally converted to
 			Type42 fonts, using an external conversion
 			tool (not included).
-
-   PostScript::Resources - get information from Unix PostScript Resource files
-
-			.UPR files specify where font metrics files
-			and outline programs can be found for fonts.
 
    PostScript::FontMetrics - get information from Adobe Font Metrics file
 
@@ -54,7 +54,13 @@ Programs:
 
    font2pfa	      - decodes a font file to ASCII (.pfa) format
 
+			The input format may be any type that
+			PostScript::Font can deal with.
+
    font2pfb	      - encodes a font file to binary (.pfb) format
+
+			The input format may be any type that
+			PostScript::Font can deal with.
 
 To install, unpack the archive, change to the unpacked directory, and
 type:
@@ -63,8 +69,14 @@ type:
     make all test
     make install
 
-For a True Type to Type42 conversion tool, see 
-http://ftp.giga.or.at/pub/nih/ttftot42
+AVAILABILITY
+
+(web-page) http://www.squirrel.nl/people/jvromans/software.html
+(download) http://www.perl.com/CPAN/authors/id/JV/
+           Archive name: PostScript-Font-1.01.tar.gz
+
+For a TrueType to Type42 conversion tool, see 
+           http://ftp.giga.or.at/pub/nih/ttftot42
 
 ----------------------------------------------------------------------------
 Johan Vromans                                           jvromans@squirrel.nl
