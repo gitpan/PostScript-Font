@@ -1,0 +1,9 @@
+README
+MANIFEST
+Makefile.PL
+lib/PostScript/Font.pm
+lib/PostScript/FontInfo.pm
+lib/PostScript/FontMetrics.pm
+scripts/fontsampler
+scripts/pfb2pfa
+scripts/pfa2pfb

@@ -1,0 +1,55 @@
+This package contains a couple of modules to get information from
+PostScript fonts and associated metrics files.
+
+Modules:
+
+   PostScript::Font   - get information from a PostScript font file
+
+			Information includes the font name, font
+			family name, but also encoding vector and list
+			of glyphs.
+			Font types 1 and 42 are supported; types 2, 3
+			and 5 are usually handled as well.
+
+   PostScript::FontMetrics - get information from Adobe Font Metrics file
+
+			Information includes the font name, font
+			family name, encoding vector, width and
+			kerning tables.
+
+   PostScript::FontInfo - get information from Windows .INF files
+
+			Information includes the font name, font
+			family name and PC filename prefix.
+
+Programs:
+
+   fontsampler        - makes detailed or concise sample pages of fonts
+
+			In detailed mode, one or more pages are
+			produced to show all the glyphs of the font.
+			Otherwise, just a sample of the font is
+			printed, allowing for 40 or more font samples
+			per page.
+			The output is compliant with Adobe's Document
+			Structuring Conventions version 3.0.
+
+   pfb2pfa	      - decodes a font file to ASCII (.pfa) format
+
+   pfa2pfb	      - encodes a font file to binary (.pfb) format
+
+To install, unpack the archive, change to the unpacked directory, and
+type:
+
+    perl Makefile.PL
+    make all
+    make install
+
+NOTE: This package is still under development.
+
+----------------------------------------------------------------------------
+Johan Vromans                                           jvromans@squirrel.nl
+Squirrel Consultancy                                Haarlem, the Netherlands
+http://www.squirrel.nl                http://www.squirrel.nl/people/jvromans
+PGP Key 2048/4783B14D     http://www.squirrel.nl/people/jvromans/pgpkey.html
+----------------------- "Arms are made for hugging" ------------------------
