@@ -11,9 +11,11 @@ lib/PostScript/StandardEncoding.pm
 lib/PostScript/ISOLatin1Encoding.pm
 lib/PostScript/BasicTypesetter.pm
 lib/PostScript/PseudoISO.pm
+lib/PostScript/Font/TTtoType42.pm
 script/fontsampler
 script/font2pfa
 script/font2pfb
+script/ttfwrapper
 t/basic.t
 examples/example.pl
 examples/btexample.pl

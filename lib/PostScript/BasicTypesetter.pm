@@ -1,10 +1,10 @@
 # BasicTypesetter.pm --  Module for basic PostScript typesetting
-# RCS Info        : $Id: BasicTypesetter.pm,v 1.16 2001-04-14 12:46:04+02 jv Exp $
+# RCS Info        : $Id: BasicTypesetter.pm,v 1.16 2001-04-14 12:46:04+02 jv Exp jv $
 # Author          : Johan Vromans
 # Created On      : Sun Jun 18 11:40:12 2000
 # Last Modified By: Johan Vromans
-# Last Modified On: Sat Apr 14 12:45:46 2001
-# Update Count    : 556
+# Last Modified On: Thu Nov 21 16:55:40 2002
+# Update Count    : 560
 # Status          : Unknown, Use with caution!
 
 package PostScript::BasicTypesetter;
@@ -106,6 +106,7 @@ and C<12> for the lineskip.
 
 my $def_fontsize = 10;
 my $def_lineskip = 12;
+my $def_hyphens = '';
 
 sub new {
     my $class = shift;
@@ -130,6 +131,7 @@ sub new {
     bless $self, $class;
     $self->{fontsize} = $def_fontsize;
     $self->{lineskip} = $def_lineskip;
+    $self->{hyphens} = $def_hyphens;
     $self;
 }
 
@@ -311,6 +313,24 @@ sub lineskip {
     my ($self, $skip) = @_;
     $self->{lineskip} = $skip if $skip;
     $self->{lineskip};
+}
+
+=head2 hyphens
+
+Example:
+
+    $ts->hyphens('-/');
+    $hyphens = $ts->hyphens;
+
+Sets or gets the current string of characters considered to be hyphens
+(points words can be split on a line break). Disabled by default.
+
+=cut
+
+sub hyphens {
+    my ($self, $hyphens) = @_;
+    $self->{hyphens} = $hyphens if defined $hyphens;
+    $self->{hyphens};
 }
 
 =head2 linebreak
@@ -1095,6 +1115,12 @@ sub _ps_simpletextbox {
     # Line skip (baselines).
     my $lineskip = $self->{lineskip};
 
+    # Characters on which a word may split
+    my $hyphens = $self->{hyphens};
+
+    # Make pattern.
+    $hyphens = "([$hyphens])([^$hyphens\s]+[$hyphens]?)" if $hyphens;
+
     my @res;
     my $maxwidth = 0;		# max width of textbox
 
@@ -1119,8 +1145,29 @@ sub _ps_simpletextbox {
     foreach my $str ( @text ) {
 	# Width of this "word".
 	my $w = $self->stringwidth($str);
+	my $remainder = '';
+	# If it doesn't fit, see if word can be split
+	if ( $hyphens and $wd + $wspace + $w > $width ) {
+	    my $str2 = $str;
+	    my $w2 = $w;
+	    while ($wd + $wspace + $w2 > $width) {
+		last unless $str2 =~ s|$hyphens$|$1|;
+		$remainder = $2 . $remainder;
+		$w2 = $self->stringwidth($str2);
+	    }
+	    if ( length $remainder ) {
+		if ( $wd + $wspace + $w2 > $width ) {
+		    $remainder = '';
+		}
+		else {
+		    push @res, $str2;
+		    $w = $w2;
+		    $str = $str2;
+		}
+	    }
+	}
 	# See if it fits.
-	if ( @res && $wd + $wspace + $w > $width ) {
+	if ( (@res && $wd + $wspace + $w > $width) or length($remainder) ) {
 	    # No -> flush what we have.
 	    $flush->();
 	    # Advance to next line.
@@ -1129,6 +1176,10 @@ sub _ps_simpletextbox {
 	    @res = ();
 	    $xi = 0;
 	    $wd = -$wspace;
+	    if ( length($remainder) ) {
+	        $str = $remainder;
+		$w = $self->stringwidth($remainder);
+	    }
 	}
 	# It fits -> append.
 	$wd += $wspace + $w;

@@ -1,9 +1,9 @@
-# RCS Status      : $Id: FontMetrics.pm,v 1.20 2002-01-11 20:50:03+01 jv Exp $
+# RCS Status      : $Id: FontMetrics.pm,v 1.21 2002-11-21 16:41:27+01 jv Exp $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Fri Jan 11 20:49:21 2002
-# Update Count    : 432
+# Last Modified On: Thu Nov 21 16:41:02 2002
+# Update Count    : 434
 # Status          : Released
 
 ################ Module Preamble ################
@@ -19,7 +19,7 @@ use IO;
 use File::Spec;
 
 use vars qw($VERSION);
-$VERSION = "1.03";
+$VERSION = "1.04";
 
 # The ttftot42 program is used to extract metrics from True Type fonts.
 use vars qw($ttftot42);
@@ -349,7 +349,7 @@ sub kstring {
 		}
 		# Turn last item into string, and push the displacement.
 		else {
-		    $res[$#res] =~ s/([()\\]|[^\040-\176])/sprintf("\\%o",ord($1))/eg;
+		    $res[$#res] =~ s/([()\\]|[^\040-\176])/sprintf("\\%03o",ord($1))/eg;
 		    $res[$#res] = "(".$res[$#res].")";
 		    push (@res, $wd);
 		}
@@ -387,7 +387,7 @@ sub kstring {
 	}
 	else {
 	    # Turn previous into string.
-	    $res[$#res] =~ s/([()\\]|[^\040-\176])/sprintf("\\%o",ord($1))/eg;
+	    $res[$#res] =~ s/([()\\]|[^\040-\176])/sprintf("\\%03o",ord($1))/eg;
 	    $res[$#res] = "(".$res[$#res].")";
 	    # Add kerning value and the new item.
 	    push (@res, $kw, $_);
@@ -397,7 +397,7 @@ sub kstring {
 
     # Turn the last item into string, if needed.
     if ( !(defined $ext && $prev eq 'space') ) {
-	$res[$#res] =~ s/([()\\]|[^\040-\176])/sprintf("\\%o",ord($1))/eg;
+	$res[$#res] =~ s/([()\\]|[^\040-\176])/sprintf("\\%03o",ord($1))/eg;
 	$res[$#res] = "(".$res[$#res].")";
     }
 

@@ -1,9 +1,9 @@
-# RCS Status      : $Id: PrinterFontMetrics.pm,v 1.2 2001-06-14 12:32:23+02 jv Exp $
+# RCS Status      : $Id: PrinterFontMetrics.pm,v 1.3 2002-05-04 18:48:44+02 jv Exp $
 # Author          : Andrew Ford
 # Created On      : March 2001
 # Last Modified By: Johan Vromans
-# Last Modified On: Thu Jun 14 12:32:12 2001
-# Update Count    : 4
+# Last Modified On: Sat May  4 18:48:08 2002
+# Update Count    : 10
 # Status          : Development
 
 ################ Module Preamble ################
@@ -20,7 +20,7 @@ use IO;
 use File::Spec;
 
 use vars qw($VERSION @ISA $AUTOLOAD);
-$VERSION = "0.04";
+$VERSION = "0.05";
 @ISA = qw(PostScript::FontMetrics);
 
 # Definitions of the PFM file layout
@@ -143,7 +143,7 @@ sub new {
 
     eval { $self->_loadpfm($verbose) };
     if ( $@ ) {
-        die ($@)  unless $error eq "warn";
+        die ($@)  unless $error eq "warn" || $error eq "ignore";
         warn ($@) unless $error eq "ignore";
         return undef;
     }
@@ -204,16 +204,17 @@ sub _loadpfm ($$) {
     my($self, $verbose) = @_;
 
     my $fn = $self->{file};
-    my $fh = new IO::File;                      # font file
+    local *FH;					# font file
     my $sz = $self->{filesize} = -s $fn;        # file size
 
-    $fh->open($fn) || die ("$fn: $!\n");
+    open(FH, $fn) || die ("$fn: $!\n");
     print STDERR ("$fn: Loading PFM file\n") if $verbose;
+    binmode(FH);		# requires a file handle, yuck
 
     # Read in the pfm data.
     my $len = 0;
 
-    unless ( ($len = $fh->sysread ($self->{_rawdata}, $sz, 0)) == $sz ) {
+    unless ( ($len = sysread (FH, $self->{_rawdata}, $sz, 0)) == $sz ) {
         die ("$fn: Expecting $sz bytes, got $len bytes\n");
     }
 }
@@ -230,7 +231,7 @@ sub _pfm_header {
           = unpack(PFM_HEADER_TEMPLATE,
                    substr($self->{_rawdata}, 0, PFM_HEADER_LENGTH));
         $header->{dfCopyright} =~ s/\0.*//;
-        
+
         die "$self->{file}: file size is $self->{filesize} but dfSize = $header->{dfsize}"
           unless $header->{dfSize} == $self->{filesize};
     }

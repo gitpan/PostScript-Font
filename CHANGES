@@ -1,3 +1,17 @@
+Version 1.07
+------------
+
+  * Remove the need for an external program to convert True Type fonts
+    to Type42. With a little help of Font::TTF we can do the
+    conversion ourselves.
+
+  * Fix to PostScript generation with less-than 3 digit octal numbers.
+
+Version 1.06
+------------
+
+  * Small fixes to parsing of AFM files.
+
 Version 1.05
 ------------
 

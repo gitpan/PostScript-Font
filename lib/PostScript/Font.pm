@@ -1,9 +1,9 @@
-# RCS Status      : $Id: Font.pm,v 1.17 2000-11-15 14:50:14+01 jv Exp $
+# RCS Status      : $Id: Font.pm,v 1.19 2002-12-20 18:59:12+01 jv Exp $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Wed Nov 15 14:46:38 2000
-# Update Count    : 375
+# Last Modified On: Fri Dec 20 18:50:03 2002
+# Update Count    : 429
 # Status          : Released
 
 ################ Module Preamble ################
@@ -24,8 +24,7 @@ $VERSION = "1.02";
 
 # If you have the t1disasm program, have $t1disasm point to it.
 # This speeds up the glyph fetching.
-# The ttftot42 is used to convert True Type fonts to Type 42.
-use vars qw($t1disasm $ttftot42);
+use vars qw($t1disasm);
 
 my $trace;
 my $verbose;
@@ -49,8 +48,6 @@ sub new {
     $atts{format} = "ascii" if lc($atts{format}) eq "pfa";
     $atts{format} = "binary" if lc($atts{format}) eq "pfb";
 
-    $ttftot42 = _getexec ("ttftot42")
-      unless defined $ttftot42;
     $t1disasm = _getexec ("t1disasm")
       unless defined $t1disasm;
 
@@ -76,8 +73,9 @@ sub new {
     };
 
     if ( $@ ) {
-	die ($@)  unless $error eq "warn";
-	warn ($@) unless $error eq "ignore";
+	return undef if $error eq "ignore";
+	die ($@)     if $error eq "die";
+	warn ($@)    if $error eq "warn";
 	return undef;
     }
 
@@ -86,7 +84,6 @@ sub new {
 
 sub FileName	{ $_[0]->{file};      }
 sub FontName	{ $_[0]->{name};      }
-sub FontData	{ ${$_[0]->{data}};   }
 sub FamilyName	{ $_[0]->{family};    }
 sub FontType	{ $_[0]->{type};      }
 sub Version	{ $_[0]->{version};   }
@@ -95,7 +92,17 @@ sub isFixedPitch{ $_[0]->{fixed};     }
 sub Weight	{ $_[0]->{weight};    }
 sub FontMatrix	{ $_[0]->{fontmatrix};}
 sub FontBBox	{ $_[0]->{fontbbox};  }
-sub DataFormat  { $_[0]->{format};    }
+sub DataFormat  { $_[0]->{dataformat} }
+
+sub FontData	{
+    my ($self, $format) = @_;
+    if ( defined $format ) {
+	# Not yet supported!
+	return ${$self->_cvtinternal($format)};
+    }
+    $self->{data} = $self->_cvtinternal unless exists $self->{data};
+    ${$self->{data}};
+}
 
 sub FontGlyphs {
     my $self = shift;
@@ -142,54 +149,50 @@ sub _loadfont ($) {
     my $sz = -s $fn;	# file size
 
     $fh->open ($fn) || die ("$fn: $!\n");
-    binmode($fh);
     print STDERR ("$fn: Loading font file\n") if $verbose;
 
     # Read in the font data.
     my $len = 0;
-    unless ( ($len = $fh->sysread ($data, 4, 0)) == 4 ) {
-	die ("$fn: Expecting $sz bytes, got $len bytes\n");
-    }
-
-    $self->{origdataformat} = 'pfa';
-    if ( $data eq "\0\1\0\0" ) {
-	#### WARNING: This is Unix specific! ####
-	my $cmd = $ttftot42 || $PostScript::FontMetrics::ttftot42;
-	my $f = _qtfn($fn);
-	if ( $cmd ) {
-	    $cmd .= " -fc $f 2>>/dev/null |";
-	    print STDERR ("$fn: Converting True Type font to Type 42\n")
-	      if $verbose;
-	}
-	else {
-	    die ("$fn: Cannot convert True Type font\n");
-	}
-
-	$fh->close;
-	$type = "t";
-	print STDERR ("+ $cmd\n") if $trace;
-	$fh->open ($cmd) || die ("$cmd: $!\n");;
-	$sz = -1;
-	$len = 0;
-	$self->{origdataformat} = 'ttf';
-    }
-
     while ( $fh->sysread ($data, 32768, $len) > 0 ) {
 	$len = length ($data);
     }
     $fh->close;
+    die ("$fn: Expecting at least 4 bytes, got ".length($data)." bytes\n")
+      unless length($data) >= 4;
+
+    $self->{dataformat} = 'ps';
+    if ( substr($data,0,4) eq "\0\1\0\0" ) {
+	# For the time being, Font::TTF is optional. Be careful.
+	eval {
+	    require PostScript::Font::TTtoType42;
+	};
+	if ( $@ ) {
+	    die ("$fn: Cannot convert True Type font\n");
+	}
+	my $wrapper =
+	  new PostScript::Font::TTtoType42:: ($fn,
+					      verbose => $verbose,
+					      trace => $trace);
+	$type = "t";
+	$data = $wrapper->as_string;
+	$self->{t42wrapper} = $wrapper;
+	$self->{dataformat} = "type42";
+	$self->{encoding} = "StandardEncoding";
+    }
+    else {
+	# Make ref.
+	$data = \"$data";		#";
+    }
+
     print STDERR ("Read $len bytes from $fn\n") if $trace;
     die ("$fn: Expecting $sz bytes, got $len bytes\n")
       if $sz > 0 && $sz != $len;
-
-    # Make ref.
-    $data = \"$data";		#";
 
     # Convert .pfb encoded font data.
     if ( $$data =~ /^\200[\001-\003]/ ) {
 	print STDERR ("$fn: Converting to ASCII format\n") if $verbose;
 	$data = $self->_pfb2pfa ($data);
-	$self->{origdataformat} = 'pfb';
+	$self->{dataformat} = 'pfa';
     }
     # Otherwise, must be straight PostScript.
     elsif ( $$data !~ /^%!/ ) {
@@ -244,6 +247,12 @@ sub _qtfn ($) {
     my $f = shift;
     $f =~ s/([\\'])/'\\$1'/g;
     "'".$f."'";
+}
+
+sub _cvtinternal {
+    my ($self, $format) = @_;
+    return $self->{data} if $format eq $self->{format};
+    undef;
 }
 
 sub _pfb2pfa ($;$) {
@@ -341,15 +350,7 @@ sub _pfa2asm ($;$) {
 	#### WARNING: This is Unix specific! ####
 	my $cmd = "$t1disasm $fn";
 	if ( $self->{type} eq 't' ) {
-	    if ( $ttftot42 ) {
-		$cmd = "$ttftot42 -fc $fn | $t1disasm";
-	    }
-	    elsif ( $PostScript::FontMetrics::ttftot42 ) {
-		$cmd = "$PostScript::FontMetrics::ttftot42 -fc $fn | $t1disasm";
-	    }
-	    else {
-		die ($self->{file}, ": Cannot convert True Type font\n");
-	    }
+	    die ($self->{file}, ": Logic error -- Cannot convert True Type font\n");
 	}
 
 	print STDERR ("+ $cmd |\n") if $trace;
@@ -412,9 +413,17 @@ sub _getglyphnames ($;$) {
     my ($self, $data) = @_;
     my @glyphs = ();
 
+    print STDERR ($self->{file}, ": Getting glyph info\n") if $verbose;
+
     $data = $self->{data} unless defined $data;
 
-    print STDERR ($self->{file}, ": Getting glyph info\n") if $verbose;
+    if ( $self->{dataformat} eq "type42" ) {
+	my $g = $self->{t42wrapper}->glyphnames;
+	print STDERR ($self->{file}, ": Number of glyphs = ",
+		      scalar(@$g), "\n")
+	  if $verbose;
+	return $g;
+    }
 
     if ( $self->{format} eq "binary" ) {
 	$data = $self->_pfb2pfa ($data);
@@ -433,10 +442,14 @@ sub _getglyphnames ($;$) {
 	}
     }
 
-    while ( $data =~ m;((^\d*\s*/([.\w]+))|(\bend\b)).*\n;mg ) {
+#    while ( $data =~ m;((^\d*\s*/([.\w]+))|(\bend\b)).*\n;mg ) {
+    while ( $data =~ m;(/([.\w]+)\b|\bend\b);mg ) {
 	last if $1 eq "end";
-	push (@glyphs, $3);
+	push (@glyphs, $2);
     }
+
+    print STDERR ($self->{file}, ": Number of glyphs = ", scalar(@glyphs), "\n")
+      if $verbose;
 
     \@glyphs;
 }
@@ -538,13 +551,9 @@ how weird the font information is stored.
 The input font file can be encoded in ASCII (so-called C<.pfa>
 format), or binary (so-called C<.pfb> format).
 
-True Type fonts are understood as well, they are converted internally
-to Type 42 format. Currently this requires an external program,
-I<ttftot42>. This program will be used automatically if it can be
-located in the execution C<PATH>. Alternatively, you can set the
-variable C<$PostScript::Font::ttftot42> (or
-C<$PostScript::FontMetrics::ttftot42>) to the name of the actual
-program. See also L<EXTERNAL PROGRAMS>.
+If you have Martin Hosken's Font::TTF package installed,
+PostScript::Font can also handle True Type fonts. They are converted
+internally to Type 42 format.
 
 =head1 CONSTRUCTOR
 
@@ -706,38 +715,6 @@ C<PostScript::ISOLatin1Encoding> instead.
 
 =head1 EXTERNAL PROGRAMS
 
-Two external programs can be used by this package.
-
-I<ttftot42> is required when True Type fonts must be handled. It is
-called as follows:
-
-    ttftot42 -fc filename
-
-This invocation will write the Type 42 version of the True Type font to
-standard output.
-
-I<ttftot42> can be found on http://ftp.giga.or.at/pub/nih/ttftot42
-
-An alternative, but not encouraged, way to handle True Type fonts is
-by converting them to Type 1 fonts. An excellent converter, I<ttf2pt1>,
-can be used for this. To use this program, create a fake I<ttftot42>
-script and set variable $PostScript::Font::ttftot42 to the name of
-this script. The script should contain something like this:
-
-    $!/bin/sh
-    shift	# get rid of '-fc' argument
-    exec ttf2pt1 -ef "$@" - 2>/dev/null
-
-The redirection of error output to /dev/null is necessary. since the
-program is quite verbose. Unfortunately, error messages will disappear
-as well.
-
-I<ttf2pt1> can be found on http://www.netspace.net.au/~mark/ttf2pt1
-
-B<Note:> the resultant Type1 font is not a real conversion, but a
-(very similar) imitation of the original True Type font. Small
-differences may be noticable depending on the font quality.
-
 I<t1disasm> can be used to speed up the fetching of the list of font
 glyphs from Type 1 fonts. It is called as follows:
 
@@ -750,8 +727,8 @@ places.
 
 =head1 KNOWN BUGS
 
-Invoking external programs (I<t1disasm>, I<ttftot42>) is guaranteed to
-work on Unix only.
+Invoking external programs (like I<t1disasm>) is guaranteed to work on
+Unix only.
 
 =head1 SEE ALSO
 
