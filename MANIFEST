@@ -9,6 +9,7 @@ lib/PostScript/Resources.pm
 lib/PostScript/StandardEncoding.pm
 lib/PostScript/ISOLatin1Encoding.pm
 lib/PostScript/BasicTypesetter.pm
+lib/PostScript/PseudoISO.pm
 script/fontsampler
 script/font2pfa
 script/font2pfb

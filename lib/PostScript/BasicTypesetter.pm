@@ -1,10 +1,10 @@
 # BasicTypesetter.pm --  Module for basic PostScript typesetting
-# RCS Info        : $Id: BasicTypesetter.pm,v 1.6 2000-06-23 09:09:44+02 jv Exp $
+# RCS Info        : $Id: BasicTypesetter.pm,v 1.9 2000-06-24 17:30:46+02 jv Exp $
 # Author          : Johan Vromans
 # Created On      : Sun Jun 18 11:40:12 2000
 # Last Modified By: Johan Vromans
-# Last Modified On: Fri Jun 23 09:09:20 2000
-# Update Count    : 455
+# Last Modified On: Sat Jun 24 17:30:29 2000
+# Update Count    : 477
 # Status          : Unknown, Use with caution!
 
 package PostScript::BasicTypesetter;
@@ -360,6 +360,23 @@ sub tjvector {
     $self->metrics->kstring(@_);
 }
 
+=head2 textwidth
+
+Example:
+
+    $width = $ts->textwidth;
+
+Returns the width of the last textbox set by this typesetter.
+
+=cut
+
+sub textwidth {
+    my $self = shift;
+
+    my ($str) = @_;
+    $self->{textwidth};
+}
+
 ################ PostScript code builders ################
 
 # All ps_ routines return a printable PostScript string.
@@ -570,9 +587,12 @@ This method keeps track of the settings, and will not produce
 anything if the current settings are already as requested. Hence use
 liberally.
 
+Call with an explicit C<undef> argument to flush the cache.
+
 =cut
 
 my $ps_curfont;
+my $ps_curFpt;
 
 sub ps_setfont {
     my $self = shift;
@@ -580,6 +600,10 @@ sub ps_setfont {
     my $ret = '';
     my $size = $self->{fontsize};
     croak ("ps_setfont: Font size not set") unless $size;
+    if ( @_ && !defined shift ) {
+	undef $ps_curfont;
+	undef $ps_curFpt;
+    }
     unless ( $ps_curfont && $ps_curfont eq "$size $self->fontname" ) {
 	$ret .= sprintf ("/%s findfont %.3g scalefont setfont\n",
 			 $self->fontname, $size);
@@ -598,8 +622,6 @@ Produces the PostScript code to print the text at the current position.
 The argument to this function must be the result of a call to C<tjvector>.
 
 =cut
-
-my $ps_curFpt;
 
 # Print a typesetting vector. Use TJ definition.
 sub ps_tj {
@@ -658,8 +680,17 @@ C<ps_textbox> can be chained: each call will continue exactly where
 the preceding call left off. This is, of course, only useful with
 flush left alignment.
 
+The method C<textwidth> will return the actual width of the text that
+was set. Note that this may be larger than the specified width of the
+text box, when the text contains unbreakable items larger than the
+width.
+
 Values for C<$align> are C<"l"> (default): flush left, C<"r">: flush
 right, C<"c">: centered, C<"j">: justified.
+
+B<NOTE:> The string(s) should I<not> contain tabs and newlines, since
+these may get a different meaning in the future. Currently, tabs and
+newlines are treated as whitespace (and mostly ignored).
 
 =cut
 
@@ -688,6 +719,7 @@ sub _ps_textbox {
 
     my $cur = $self;
     my $cur0 = $cur;
+    my $cur00 = $cur;
 
     # Deref arguments, if needed.
     my $xi = ref($xxi) ? $$xxi : $xxi;
@@ -698,6 +730,7 @@ sub _ps_textbox {
     my $wd = $xi;		# accumulated width
     my $ret = '';		# accumulated output
     my $lskip = $cur0->lineskip; # line skip (fixed)
+    my $maxwidth = 0;		# max width of textbox
 
     # Setup global values for this font.
     my $switch_font = sub {
@@ -712,6 +745,7 @@ sub _ps_textbox {
 
     # This is the actual typesetting routine.
     my $flush = sub {
+	my $did = 0;
 	$cur = $cur0;
 	$switch_font->();
 
@@ -751,6 +785,7 @@ sub _ps_textbox {
 	$xi = $width - $wd if $align eq "r";
 	$xi = ($width - $wd)/2 if $align eq "c";
 	$ret .= sprintf ("%.2f %.2f moveto\n", $x+$xi, $y);
+	$maxwidth = $wd if $wd > $maxwidth;
 
 	# Calculate amount of stretch needed.
 	my $stretch = 1;
@@ -760,10 +795,13 @@ sub _ps_textbox {
 	# Process the vectors.
 	foreach $t ( @$tt ) {
 	    $cur = shift(@$t);
+	    next unless @$t;
 	    $ret .= $cur->ps_setfont;
 	    $t = [map { ref($_) ? @$_ : $_*$stretch } @$t];
 	    $ret .= $cur->ps_tj ($t);
+	    $did++;
 	}
+	$did;
     };
 
     # Subroutine code starts here.
@@ -818,17 +856,18 @@ sub _ps_textbox {
 	if ( $wd + $w > $width ) {
 
 	    # No. Fill what we have.
-	    $flush->();
+	    if ( $flush->() ) {
+		# Advance to next line.
+		$y -= $lskip;
 
-	    # Advance to next line.
-	    $y -= $lskip;
-
-	    # Reset.
-	    @res = ();
-	    $wd = 0;
-	    $xi = 0;
+		# Reset.
+		@res = ();
+		$wd = 0;
+		$xi = 0;
+		$overflow++;
+	    }
 	    $cur0 = $cur;
-	    $overflow++;
+
 	}
 	# It fits -> append.
 	# Push strings as a [width,kstring] pair, and spaces as a
@@ -851,6 +890,7 @@ sub _ps_textbox {
     # Update return values.
     $$yy = $y if ref($yy);
     $$xxi = $xi if ref($xxi);
+    $cur00->{textwidth} = $maxwidth;
     $ret;
 }
 
@@ -881,6 +921,7 @@ sub _ps_simpletextbox {
     my $lineskip = $self->{lineskip};
 
     my @res;
+    my $maxwidth = 0;		# max width of textbox
 
     my $flush = sub {
 	my $ext = 0;
@@ -893,6 +934,7 @@ sub _ps_simpletextbox {
 	$xi = ($width - $wd)/2 if $align eq "c";
 	$ret .= sprintf ("%.2f %.2f moveto\n", $x+$xi, $y);
 	$ret .= $self->ps_tj ($t);
+	$maxwidth = $wd if $wd > $maxwidth;
     };
 
     # Subroutine code starts here.
@@ -903,7 +945,7 @@ sub _ps_simpletextbox {
 	# Width of this "word".
 	my $w = $self->stringwidth($str);
 	# See if it fits.
-	if ( $wd + $wspace + $w > $width ) {
+	if ( @res && $wd + $wspace + $w > $width ) {
 	    # No -> flush what we have.
 	    $flush->();
 	    # Advance to next line.
@@ -931,6 +973,7 @@ sub _ps_simpletextbox {
     # Update return values.
     $$yy = $y if ref($yy);
     $$xxi = $xi if ref($xxi);
+    $self->{textwidth} = $maxwidth;
     $ret;
 }
 
