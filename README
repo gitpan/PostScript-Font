@@ -1,5 +1,8 @@
 This package contains a couple of modules to get information from
-PostScript fonts and associated metrics files.
+PostScript fonts and associated metrics files. Also included is a
+program to make font samples, and programs to handle the conversion of
+PostScript fonts from binary (.pfb) format to ASCII (.pfa) format, and
+vice versa.
 
 Modules:
 
@@ -34,9 +37,9 @@ Programs:
 			The output is compliant with Adobe's Document
 			Structuring Conventions version 3.0.
 
-   pfb2pfa	      - decodes a font file to ASCII (.pfa) format
+   font2pfa	      - decodes a font file to ASCII (.pfa) format
 
-   pfa2pfb	      - encodes a font file to binary (.pfb) format
+   font2pfb	      - encodes a font file to binary (.pfb) format
 
 To install, unpack the archive, change to the unpacked directory, and
 type:
@@ -44,8 +47,6 @@ type:
     perl Makefile.PL
     make all
     make install
-
-NOTE: This package is still under development.
 
 ----------------------------------------------------------------------------
 Johan Vromans                                           jvromans@squirrel.nl

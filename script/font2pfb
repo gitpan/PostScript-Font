@@ -1,11 +1,11 @@
-#!/usr/local/bin/perl
-my $RCS_Id = '$Id: pfb2pfa.pl,v 1.4 1999-02-08 20:34:06+01 jv Exp jv $ ';
+#!/usr/bin/perl
+my $RCS_Id = '$Id: font2pfa.pl,v 1.5 1999-03-07 16:00:53+01 jv Exp $ ';
 
 # Author          : Johan Vromans
 # Created On      : January 1999
 # Last Modified By: Johan Vromans
-# Last Modified On: Mon Feb  8 20:57:04 1999
-# Update Count    : 23
+# Last Modified On: Sun Mar  7 15:47:21 1999
+# Update Count    : 30
 # Status          : Unknown, Use with caution!
 
 ################ Common stuff ################
@@ -16,15 +16,17 @@ my $RCS_Id = '$Id: pfb2pfa.pl,v 1.4 1999-02-08 20:34:06+01 jv Exp jv $ ';
 use strict;
 my $my_package = 'Sciurix';
 my ($my_name, $my_version) = $RCS_Id =~ /: (.+).pl,v ([\d.]+)/;
-$my_version .= '*' if length('$Locker: jv $ ') > 12;
+$my_version .= '*' if length('$Locker:  $ ') > 12;
 
 ################ Program parameters ################
 
 use Getopt::Long 2.00;
+my $output;
 my $verbose = 0;
 my $type = $0 =~ /pfb$/ ? "pfb" : "pfa";
 my ($debug, $trace) = (0, 0);
 options ();
+@ARGV = ("-") unless @ARGV;
 
 ################ Presets ################
 
@@ -34,15 +36,15 @@ my $TMPDIR = $ENV{'TMPDIR'} || '/usr/tmp';
 
 ################ The Process ################
 
-my $font = new PostScript::Font (shift(@ARGV),
+my $font = new PostScript::Font ($ARGV[0],
 				 error => 'die',
 				 verbose => $verbose,
 				 trace => $trace,
 				 format => $type,
 				);
 
-if ( @ARGV ) {
-    open (STDOUT, ">$ARGV[0]") || die ("$ARGV[0]: $!\n");
+if ( defined $output ) {
+    open (STDOUT, ">$output") || die ("$output: $!\n");
 }
 print STDOUT ($font->FontData);
 
@@ -55,27 +57,29 @@ sub options {
     # Process options.
     if ( @ARGV > 0 && $ARGV[0] =~ /^[-+]/ ) {
 	usage ()
-	    unless GetOptions (ident	=> \$ident,
-			       verbose	=> \$verbose,
-			       "ascii|pfa"  => sub { $type = "pfa" },
-			       "binary|pfb" => sub { $type = "pfb" },
-			       "asm"	     => sub { $type = "asm" },
-			       trace	=> \$trace,
-			       help	=> \$help,
-			       debug	=> \$debug)
+	    unless GetOptions ("ident"		=> \$ident,
+			       "verbose"	=> \$verbose,
+			       "output=s"	=> \$output,
+			       "ascii|pfa"	=> sub { $type = "pfa" },
+			       "binary|pfb"	=> sub { $type = "pfb" },
+			       "asm"		=> sub { $type = "asm" },
+			       "trace"		=> \$trace,
+			       "help"		=> \$help,
+			       "debug"		=> \$debug)
 		&& !$help;
     }
     print STDERR ("This is $my_package [$my_name $my_version]\n")
 	if $ident;
-    usage () unless @ARGV <= 2;
+    usage () unless @ARGV <= 1;
 }
 
 sub usage {
     print STDERR <<EndOfUsage;
 This is $my_package [$my_name $my_version]
-Usage: $0 [options] [input [output]]
-    -ascii|pfa		decodes to .pfa format (default for pfb2pfa)
-    -binary|pfb		encodes to .pfb format (default for pfa2pfb)
+Usage: $0 [options] [input-file]
+    -output XXX		sends output to file XXX instead of standard output
+    -ascii|pfa		decodes to .pfa format (default for font2pfa)
+    -binary|pfb		encodes to .pfb format (default for font2pfb)
     -help		this message
     -ident		show identification
     -verbose		verbose information
@@ -87,13 +91,14 @@ EndOfUsage
 
 =head1 NAME
 
-pfb2pfa/pfa2pfb - decodes/encodes binary or ASCII encoded PostScript fonts
+font2pfa/font2pfb - decodes/encodes binary or ASCII encoded PostScript fonts
 
 =head1 SYNOPSIS
 
-  pfb2pfa [options] [input [output]]
-  pfa2pfb [options] [input [output]]
+  font2pfa [options] [input]
+  font2pfb [options] [input]
 
+    -output XXX		writes output to file XXX instead of standard output
     -ascii|pfa		decodes to .pfa (ASCII) format
     -binary|pfb		encodes to .pfb (binary) format
     -help		this message
@@ -102,7 +107,7 @@ pfb2pfa/pfa2pfb - decodes/encodes binary or ASCII encoded PostScript fonts
 
 =head1 DESCRIPTION
 
-B<pfb2pfa> converts a PostScript font.
+B<font2pfa> converts a PostScript font.
 
 The program takes, as command line arguments, the name of a PostScript
 font file, encoded either in binary (.pfb) or ascii (.pfa) format,
@@ -118,17 +123,22 @@ that ends in C<pfb>.
 
 =over 4
 
+=item B<-output> filename
+
+Writes the output to the named file. If this option is omitted, output
+is sent to standard output.
+
 =item B<-ascii> or B<-pfa>
 
 Output the font in ASCII (.pfa) format.
 This is the default behavior when the program is installed under the
-name C<pfb2pfa>.
+name C<font2pfa>.
 
 =item B<-binary> or B<-pfb>
 
 Output the font in binary (.pfb) format.
 This is the default behavior when the program is installed under the
-name C<pfa2pfb>.
+name C<font2pfb>.
 
 =item B<-help>
 
@@ -150,19 +160,18 @@ Johan Vromans, Squirrel Consultancy <jvromans@squirrel.nl>
 
 =head1 COPYRIGHT and DISCLAIMER
 
-This program is Copyright 1990,1999 by Johan Vromans.
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+This program is Copyright 1993,1999 by Squirrel Consultancy. All
+rights reserved.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+This program is free software; you can redistribute it and/or modify
+it under the terms of either: a) the GNU General Public License as
+published by the Free Software Foundation; either version 1, or (at
+your option) any later version, or b) the "Artistic License" which
+comes with Perl.
 
-If you do not have a copy of the GNU General Public License write to
-the Free Software Foundation, Inc., 675 Mass Ave, Cambridge,
-MA 02139, USA.
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See either the
+GNU General Public License or the Artistic License for more details.
 
 =cut

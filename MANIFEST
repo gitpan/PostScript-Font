@@ -4,6 +4,6 @@ Makefile.PL
 lib/PostScript/Font.pm
 lib/PostScript/FontInfo.pm
 lib/PostScript/FontMetrics.pm
-scripts/fontsampler
-scripts/pfb2pfa
-scripts/pfa2pfb
+script/fontsampler
+script/font2pfa
+script/font2pfb

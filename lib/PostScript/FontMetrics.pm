@@ -1,9 +1,9 @@
-# RCS Status      : $Id: FontMetrics.pm,v 1.6 1999-02-07 15:45:47+01 jv Exp $
+# RCS Status      : $Id: FontMetrics.pm,v 1.7 1999-03-07 16:00:53+01 jv Exp $
 # Author          : Johan Vromans
 # Created On      : December 1999
 # Last Modified By: Johan Vromans
-# Last Modified On: Sun Feb  7 14:49:30 1999
-# Update Count    : 310
+# Last Modified On: Sun Mar  7 15:51:14 1999
+# Update Count    : 312
 # Status          : Released
 
 ################ Module Preamble ################
@@ -17,7 +17,7 @@ BEGIN { require 5.005; }
 use IO;
 
 use vars qw($VERSION);
-$VERSION = "0.01";
+$VERSION = "1.0";
 
 my $trace;
 my $verbose;
@@ -375,19 +375,18 @@ Johan Vromans, Squirrel Consultancy <jvromans@squirrel.nl>
 
 =head1 COPYRIGHT and DISCLAIMER
 
-This program is Copyright 1990,1999 by Johan Vromans.
-This program is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
+This program is Copyright 1993,1999 by Squirrel Consultancy. All
+rights reserved.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+This program is free software; you can redistribute it and/or modify
+it under the terms of either: a) the GNU General Public License as
+published by the Free Software Foundation; either version 1, or (at
+your option) any later version, or b) the "Artistic License" which
+comes with Perl.
 
-If you do not have a copy of the GNU General Public License write to
-the Free Software Foundation, Inc., 675 Mass Ave, Cambridge,
-MA 02139, USA.
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See either the
+GNU General Public License or the Artistic License for more details.
 
 =cut
