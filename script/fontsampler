@@ -1,11 +1,11 @@
 #!/usr/local/bin/perl
-my $RCS_Id = '$Id: fontsampler.pl,v 1.14 2000-02-04 10:32:31+01 jv Exp $ ';
+my $RCS_Id = '$Id: fontsampler.pl,v 1.17 2000-09-27 11:06:30+02 jv Exp $ ';
 
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Fri Feb  4 10:22:34 2000
-# Update Count    : 416
+# Last Modified On: Wed Sep 27 11:05:35 2000
+# Update Count    : 466
 # Status          : Released
 
 ################ Common stuff ################
@@ -23,12 +23,15 @@ $my_version .= '*' if length('$Locker:  $ ') > 12;
 use Getopt::Long 2.00;
 
 my $details = 0;
-my $align = 0;
+my $align;
 my $include = 1;
 my $vector = 0;
 my $verbose = 0;
 my $manualfeed = 0;
+my $duplex = 0;
+my $tumble;
 my $famskip = 1;
+my $altshow = 0;		# use alternative glyph show
 my $title = "Font Samples";
 my ($debug, $trace, $test) = (0, 0, 0);
 
@@ -78,8 +81,17 @@ foreach my $file ( @ARGV ) {
 
 	# Get the glyphs.
 	my $glyphs = $font->FontGlyphs;
-	unless ( defined $glyphs ) {
+
+	if ( !defined $glyphs or @$glyphs == 0 ) {
 	    print STDERR ($font->FileName, ": No glyphs found, skipped\n");
+	    next;
+	}
+
+	# Register the glyph names.
+	my %glyphtbl = map { $_ => 1 } @$glyphs;
+	if ( !$altshow && join("",keys %glyphtbl) eq ".notdef" ) {
+	    print STDERR ($font->FileName, 
+			  ": Only '.notdef' glyphs found, skipped\n");
 	    next;
 	}
 
@@ -97,9 +109,6 @@ foreach my $file ( @ARGV ) {
 			  " glyphs, ",
 			  int(scalar(@$glyphs+255)/256),
 			  " pages\n") if $verbose;
-
-	    # Register the glyph names.
-	    my %glyphtbl = map { $_ => 1 } @$glyphs;
 
 	    # Build encoding vector.
 	    # First the elements from the standard encoding.
@@ -179,6 +188,11 @@ sub preamble {
 	    $select = 1 if $details    && $1 eq "details";
 	    $select = 1 if !$details   && $1 eq "samples";
 	    $select = 1 if $manualfeed && $1 eq "manualfeed";
+	    $select = 1 if $duplex     && $1 eq "duplex";
+	    $select = 1 if !$duplex    && $1 eq "noduplex";
+	    $select = 1 if $tumble     && $1 eq "tumble";
+	    $select = 1 if !$tumble    && $1 eq "notumble";
+	    $select = 1 if $altshow    && $1 eq "altshow";
 	    next;
 	}
 	next unless $select;
@@ -194,7 +208,16 @@ sub dofont {
     my ($name, $enc, $font) = @_;
     my $start = $page;
 
-    unless ( defined $enc ) {	# 1-page report
+    if ( $altshow ) {
+	setuppage ();
+	include_font ($font);
+	print STDOUT ("/$name     FontShow1 showpage\n");
+	print STDOUT ("/$name   0 FontShow2 showpage\n");
+	print STDOUT ("/$name 256 FontShow2 showpage\n");
+	print STDOUT ("/$name 512 FontShow2 showpage\n");
+	finishpage ();
+    }
+    elsif ( !defined $enc ) {	# 1-page report
 	setuppage ();
 	include_font ($font);
 	print STDOUT ("/$name FontShow0\n");
@@ -281,12 +304,15 @@ sub options {
 	usage ()
 	    unless GetOptions (ident => \$ident,
 			       'details!' => \$details,
-			       align => \$align,
+			       'align!' => \$align,
 			       manualfeed => \$manualfeed,
+			       'duplex!' => \$duplex,
+			       'tumble!' => \$tumble,
 			       forcevector => \$vector,
 			       'title=s' => \$title,
 			       'include!' => \$include,
 			       'famskip!' => \$famskip,
+#			       altshow => \$altshow,
 			       verbose => \$verbose,
 			       trace => \$trace,
 			       help => \$help,
@@ -294,6 +320,11 @@ sub options {
 	      && !$help;
     }
     usage () unless @ARGV > 0;	# need arguments!
+
+    if ( $duplex ) {
+	$tumble = 1 unless defined $tumble;
+	$align = 1 unless defined $align;
+    }
 
     print STDERR ("This is $my_package [$my_name $my_version]\n")
 	if $ident;
@@ -304,14 +335,18 @@ sub usage {
 This is $my_package [$my_name $my_version]
 Usage: $0 [options] fontfile [...]
     -details		show font details instead of samples
-    -align		align to double page (only with -details)
+    -[no]align		align to double page (only with -details)
     -manualfeed		manual feed paper
+    -[no]duplex		duplex printing
+    -[no]tumble		tumble
     -title XXX		descriptive title
     -[no]famskip	extra space between different families
     -[no]include	include the font definition (default)
     -help		this message
     -ident		show identification
     -verbose		verbose information
+
+Option -duplex will automatically set -tumble and -align.
 EndOfUsage
     exit 1;
 }
@@ -327,8 +362,10 @@ fontsampler [options] [PostScript font files ...]
 
  Options:
    -details		show font details instead of samples
-   -align		align to double page (only with -details)
+   -[no]align		align to even page (default with -duplex)
    -manualfeed		manual feed paper
+   -[no]duplex		duplex printing
+   -[no]tumble		tumble (default with -duplex)
    -title XXX		descriptive title
    -[no]include		include the font definition (default)
    -[no]famskip		add extra space between different families
@@ -372,10 +409,24 @@ happily process True Type fonts as well.
 
 Enable detailed output.
 
-=item B<-align>
+=item B<->[B<no>]B<align>
 
 With B<-details>, start every new font on an even page. Useful for
 n-up processing and duplex printing.
+
+This option is automatically enabled with duplex printing.
+
+=item B<->[B<no>]B<duplex>
+
+Insert PostScript code to enable or disable duplex printing. This need
+to be supported by the printer.
+
+This options will also enable B<-align> and B<-tumble>.
+
+=item B<->[B<no>]B<tumble>
+
+Insert PostScript code to enable or disable tumble. Only relevant with
+duplex printing.
 
 =item B<-manualfeed>
 
@@ -566,58 +617,59 @@ FontSamplerDict begin
   DoTitle () show
   0 NewEncoding length 1 sub DoBlock
 } def
+%-
+%+ altshow
+% print font sample page1 -- encoded characters
+/FontShow1 {
+  /FName exch def	% font name
+  /F FName findfont def
+  /F24 F 24 scalefont def
 %
-% % print font sample page1 -- encoded characters
-% /FontShow1 {
-%   /FName exch def	% font name
-%   /F FName findfont def
-%   /F24 F 24 scalefont def
+  70 190 translate
+  0.80 dup scale
+  DoTitle (, characters 0-255) show
+  0 255 DoBlock
+} def
 %
-%   70 190 translate
-%   0.80 dup scale
-%   DoTitle (, characters 0-255) show
-%   0 255 DoBlock
-% } def
-%
-% % print font sample page2 -- section of unenecoded characters
-% /FontShow2 {
-%   /Sect exch def
-%   /FName exch def	% font name
-%   /F FName findfont def
-%   F /CharStrings known {
-%     % Find and display the unencoded characters.
-%     /Encoded F /Encoding get length dict def
-%     F /Encoding get { true Encoded 3 1 roll put } forall
-%     /Unencoded [ 
-%       F /CharStrings get { pop dup Encoded exch known { pop } if } forall
-%     ] def
-%     %/Count Unencoded length def
-%     %Count 0 gt {
-%     %  (%%[) print FName 40 string cvs print
-%     %  Count (: ) print 10 string cvs print ( unencoded characters]%%\n) print
-%     %} if
-%     % Print 256 block section of the unencoded characters.
-%     Sect 256 Unencoded length 1 sub Sect 255 add min {
-%       dup 256 add Unencoded length min 1 index sub
-%       Unencoded 3 1 roll getinterval TempEncoding copy
-%       /BlockEncoding exch def
-%       /BlockCount BlockEncoding length def
-%       save
-%       F length dict F {
-%         1 index /FID eq { pop pop } { 2 index 3 1 roll put } ifelse }
-%       forall dup /Encoding TempEncoding put
-%       /* exch definefont
-%       /F exch def
-%       /F24 F 24 scalefont def
-% 
-%       70 190 translate
-%       0.80 dup scale
-%       DoTitle (, unencoded characters) show
-%       0 BlockCount 1 sub DoBlock
-%       restore
-%     } for
-%   } if
-% } def
+% print font sample page2 -- section of unenecoded characters
+/FontShow2 {
+  /Sect exch def
+  /FName exch def	% font name
+  /F FName findfont def
+  F /CharStrings known {
+    % Find and display the unencoded characters.
+    /Encoded F /Encoding get length dict def
+    F /Encoding get { true Encoded 3 1 roll put } forall
+    /Unencoded [ 
+      F /CharStrings get { pop dup Encoded exch known { pop } if } forall
+    ] def
+    %/Count Unencoded length def
+    %Count 0 gt {
+    %  (%%[) print FName 40 string cvs print
+    %  Count (: ) print 10 string cvs print ( unencoded characters]%%\n) print
+    %} if
+    % Print 256 block section of the unencoded characters.
+    Sect 256 Unencoded length 1 sub Sect 255 add min {
+      dup 256 add Unencoded length min 1 index sub
+      Unencoded 3 1 roll getinterval TempEncoding copy
+      /BlockEncoding exch def
+      /BlockCount BlockEncoding length def
+      save
+      F length dict F {
+        1 index /FID eq { pop pop } { 2 index 3 1 roll put } ifelse }
+      forall dup /Encoding TempEncoding put
+      /* exch definefont
+      /F exch def
+      /F24 F 24 scalefont def
+
+      70 190 translate
+      0.80 dup scale
+      DoTitle (, unencoded characters) show
+      0 BlockCount 1 sub DoBlock
+      restore
+    } for
+  } if
+} def
 %-
 %+ samples
 /languagelevel where
@@ -688,4 +740,16 @@ ISOLatin1Encoding { ISOLatin1Dict exch true put } forall
 /x0 50 def
 /y0  800 def
 end
+%+ duplex
+statusdict /setduplexmode known { statusdict begin true setduplexmode end } if
+%-
+%+ noduplex
+statusdict /setduplexmode known { statusdict begin false setduplexmode end } if
+%-
+%+ tumble
+statusdict /settumble known { statusdict begin true settumble end } if
+%-
+%+ notumble
+statusdict /settumble known { statusdict begin false settumble end } if
+%-
 %%EndSetup

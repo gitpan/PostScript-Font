@@ -5,6 +5,7 @@ Makefile.PL
 lib/PostScript/Font.pm
 lib/PostScript/FontInfo.pm
 lib/PostScript/FontMetrics.pm
+lib/PostScript/PrinterFontMetrics.pm
 lib/PostScript/Resources.pm
 lib/PostScript/StandardEncoding.pm
 lib/PostScript/ISOLatin1Encoding.pm

@@ -1,17 +1,29 @@
 Version 1.03
 ------------
 
-  * New module: PostScript::BasicTypesetter.
-    This module provides the necessary tools to do basic
-    typesetting.
+  * New modules: PostScript::BasicTypesetter and PostScript::PseudoISO.
+    These module provides the necessary tools to do basic typesetting.
+    NOTE: THESE MODULES ARE EXPERIMENTAL. THE APIs MAY CHANGE IN THE FUTURE.
 
-  * New example/btexample.pl; shows how to use BasicTypesetter.
+  * New module: PostScript::PrinterFontMetrics.
+    This module is like PostScript::FontMetrics, but gets the
+    information from a .PFM file instead.
+    This module was developed and contributed by Andrew Ford.
+
+  * New example/btexample.pl; Shows how to use BasicTypesetter.
     (Additional: times.upr, time0000.afm and time0003.afm.)
+
+  * fontsampler: Skip fonts that appear to have only .notdef glyphs.
 
   * Split off the encodings in two separate modules:
     PostScript::ISOLatin1Encoding and PostScript::StandardEncoding.
     This eliminates the need for FontMetrics related programs to
     require Font.pm, just for the encodings.
+
+  * Makefile.PL: Remind the user how to change the directory where the
+    binaries get installed.
+
+  * Bugfix: Use binary read when reading a font (Windows only).
 
 Version 1.02
 ------------

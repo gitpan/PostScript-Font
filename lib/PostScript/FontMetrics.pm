@@ -1,9 +1,9 @@
-# RCS Status      : $Id: FontMetrics.pm,v 1.16 2000-06-23 09:00:33+02 jv Exp $
+# RCS Status      : $Id: FontMetrics.pm,v 1.19 2000-11-15 14:50:14+01 jv Exp $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Fri Jun 23 08:29:12 2000
-# Update Count    : 417
+# Last Modified On: Wed Nov 15 14:47:38 2000
+# Update Count    : 431
 # Status          : Released
 
 ################ Module Preamble ################
@@ -19,7 +19,7 @@ use IO;
 use File::Spec;
 
 use vars qw($VERSION);
-$VERSION = "1.02";
+$VERSION = "1.03";
 
 # The ttftot42 program is used to extract metrics from True Type fonts.
 use vars qw($ttftot42);
@@ -255,10 +255,22 @@ sub _getkerndata {
 
 sub setEncoding {
     my ($self, $enc) = @_;
-    unless ( ref($enc) && ref($enc) eq 'ARRAY' && scalar(@$enc) == 256 ) {
+    if ( ref($enc) && UNIVERSAL::isa($enc,'ARRAY') && scalar(@$enc) == 256 ) {
+	# Array ref is okay.
+    }
+    elsif ( $enc eq "StandardEncoding" ) {
+	require PostScript::StandardEncoding;
+	$enc = [ @{PostScript::StandardEncoding->array} ];
+    }
+    elsif ( $enc eq "ISOLatin1Encoding" ) {
+	require PostScript::ISOLatin1Encoding;
+	$enc = [ @{PostScript::ISOLatin1Encoding->array} ];
+    }
+    else {
 	croak ("Invalid encoding vector");
     }
     $self->{encodingvector} = $enc;
+    delete $self->{_charcache};
     $self;
 }
 
@@ -391,6 +403,23 @@ sub kstring {
 
     # Return.
     wantarray ? @res : \@res;
+}
+
+sub char {
+    my ($self, $glyph) = @_;
+
+    # Return from cache if possible.
+    my $char = $self->{_charcache}->{$glyph};
+    return $char if defined $char;
+
+    # Look it up.
+    $char = -1;
+    foreach ( @{$self->EncodingVector} ) {
+	$char++;
+	next unless $_ eq $glyph;
+	return $self->{_charcache}->{$glyph} = pack("C",$char);
+    }
+    undef;
 }
 
 sub _qtfn ($) {
@@ -534,6 +563,12 @@ Returns a reference to a hash with the kerning data for glyph pairs.
 It is indexed by two glyph names (two strings separated by a comma,
 e.g. $kd->{"A","B"}).
 
+=item setEncoding ( vector )
+
+Sets the current encoding vector. The argument must be a reference to
+an array of exactly 256 elements, or the name of a pre-defined
+encoding (C<"StandardEncoding"> or C<"ISOLatin1Encoding">).
+
 =item stringwidth ( string [ , pointsize ] )
 
 Returns the width of the string, in character space units.
@@ -599,6 +634,12 @@ the following Perl code would suffice:
 
     print PS ("[ @$typesetinfo ] TJ\n");
 
+=item char
+
+Returns a one-character string that will render as the named glyph in
+the current encoding, or C<undef> if this glyph is currently not
+encoded.
+
 =back
 
 =head1 EXTERNAL PROGRAMS
@@ -617,7 +658,7 @@ I<ttftot42> can be found on http://ftp.giga.or.at/pub/nih/ttftot42
 
 =over 4
 
-=item http://www.adobe.com/supportservice/devrelations/PDFS/TN/5004.AFM_Spec.pdf
+=item http://partners.adobe.com/asn/developer/PDFS/TN/5004.AFM_Spec.pdf
 
 The specification of the Adobe font metrics file format.
 

@@ -1,13 +1,17 @@
 # PseudoISO.pm -- 
-# RCS Info        : $Id: PseudoISO.pm,v 1.1 2000-06-21 15:18:49+02 jv Exp $
+# RCS Info        : $Id: PseudoISO.pm,v 1.2 2000-07-03 17:00:05+02 jv Exp $
 # Author          : Johan Vromans
 # Created On      : Tue Jun 20 17:07:38 2000
 # Last Modified By: Johan Vromans
-# Last Modified On: Tue Jun 20 18:43:21 2000
-# Update Count    : 29
+# Last Modified On: Mon Jul  3 16:59:36 2000
+# Update Count    : 33
 # Status          : Unknown, Use with caution!
 
 package PostScript::PseudoISO;
+
+$VERSION = "1.00";
+
+use strict;
 
 =head1 NAME
 
@@ -15,8 +19,7 @@ PostScript::PseudoISO - Module with handy ISO enhancements
 
 =head1 SYNOPSYS
 
-    $str = "this is a bullet: " . PostScript::PseudoISO::->bullet;
-    $str .= " and this is an emdash: ---";
+    $str = "This is an emdash: ---";
     # Encode
     $t = PostScript::PseudoISO::->prepare($str);
 
@@ -71,16 +74,6 @@ This function returns a reference to a hash that contains the mapping
 of glyphs that are not part of the ISO Latin1 encoding. This vector
 can be used with the C<reencode> method of a
 C<PostScript::BasicTypesetter> object.
-
-=head2 glyph
-
-Example:
-
-    $bullet = PostScript::PseudoISO::->bullet;
-    $AE = PostScript::PseudoISO::->AE;
-
-Returns a one-character string that will be rendered as the specified
-glyph in the current encoding.
 
 =cut
 
@@ -148,35 +141,6 @@ sub reencodingvector {
 	"\211" => "endash",
     };
 
-}
-
-my $autoloadhelper;
-
-sub AUTOLOAD {
-    no strict 'vars';
-
-    my $name = $AUTOLOAD;
-    $name =~ s/^.*:://;
-    my ($k, $v);
-
-    unless ( $autoloadhelper ) {
-	# Setup the reencodingvector if needed.
-	reencodingvector() unless $reencodingvector;
-
-	# Fill standard encoding.
-	$v = 0;
-	foreach $k ( PostScript::ISOLatin1Encoding->array() ) {
-	    $autoloadhelper->{$k} = pack ("C",$v++);
-	}
-
-	# Add changes.
-	while ( ($k,$v) = each %$reencodingvector ) {
-	    $autoloadhelper->{$v} = $k;
-	}
-    }
-    $v = $autoloadhelper->{$name};
-    return $v if defined $v;
-    croak ("Undefined subroutine $AUTOLOAD called");
 }
 
 1;

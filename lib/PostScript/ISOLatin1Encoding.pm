@@ -1,9 +1,9 @@
-# RCS Status      : $Id: ISOLatin1Encoding.pm,v 1.1 2000-06-18 11:38:24+02 jv Exp $
+# RCS Status      : $Id: ISOLatin1Encoding.pm,v 1.2 2000-11-15 14:50:14+01 jv Exp $
 # Author          : Johan Vromans
 # Created On      : Sun Jun 18 10:47:10 2000
 # Last Modified By: Johan Vromans
-# Last Modified On: Sun Jun 18 11:24:45 2000
-# Update Count    : 15
+# Last Modified On: Wed Nov 15 14:48:53 2000
+# Update Count    : 16
 # Status          : Released
 
 ################ Module Preamble ################
@@ -100,7 +100,7 @@ is useful to quickly compare encodings.
 
 =over 4
 
-=item http://www.adobe.com/supportservice/devrelations/PDFS/TN/T1_SPEC.PDF
+=item http://partners.adobe.com/asn/developer/PDFS/TN/T1_SPEC.PDF
 
 The specification of the Type 1 font format.
 

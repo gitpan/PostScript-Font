@@ -1,15 +1,15 @@
 # BasicTypesetter.pm --  Module for basic PostScript typesetting
-# RCS Info        : $Id: BasicTypesetter.pm,v 1.9 2000-06-24 17:30:46+02 jv Exp $
+# RCS Info        : $Id: BasicTypesetter.pm,v 1.15 2001-04-13 16:43:54+02 jv Exp $
 # Author          : Johan Vromans
 # Created On      : Sun Jun 18 11:40:12 2000
 # Last Modified By: Johan Vromans
-# Last Modified On: Sat Jun 24 17:30:29 2000
-# Update Count    : 477
+# Last Modified On: Fri Apr 13 13:43:49 2001
+# Update Count    : 555
 # Status          : Unknown, Use with caution!
 
 package PostScript::BasicTypesetter;
 
-$VERSION = 1.0;
+$VERSION = "1.01";
 
 use 5.005;
 use strict;
@@ -254,6 +254,7 @@ sub reencode {
 	_error ("Invalid encoding: $baseenc");
 	return;
     }
+    $self->metrics->{tp_reencodebase} = $baseenc;
 
     # Reencode according to the vector..
     if ( $vec ) {
@@ -274,7 +275,6 @@ sub reencode {
     # Form a new name for the font.
     $self->metrics->{tp_encodedfontname} =
       $self->{metrics}->FontName . "-" . $tag;
-
 }
 
 =head2 fontsize
@@ -311,6 +311,56 @@ sub lineskip {
     my ($self, $skip) = @_;
     $self->{lineskip} = $skip if $skip;
     $self->{lineskip};
+}
+
+=head2 linebreak
+
+Example:
+
+    $ts->linebreak(\&break);
+
+Sets or gets the code to be executed when C<ps_textbox> advances due
+to a line break. The subroutine is called as a method with a reference
+to the current vertical position and should adjust the value. The
+routine should return PostScript instructions that are necessary for
+the line break, if any.
+
+=cut
+
+sub linebreak {
+    my ($self, $skip) = @_;
+    $self->{linebreak} = $skip if $skip;
+    $self->{linebreak};
+}
+
+=head2 color
+
+Example:
+
+    $ts->color([1,0,0]);   # RGB vector
+    $color = $ts->color;
+
+Sets or gets the current color. The argument must be either a
+3-element vector for RGB color coordinates, or an 4-element vector for
+CMYK coordinates. In either case, each of the coordinates must be a number
+between 0 and 1, inclusive.
+
+IMPORTANT: There's no such thing as a default color. Typesetters that
+do not have a color set will print in the current color. Use
+C<ps_setcolor>, described below, to explicitly control the color of
+the output.
+
+=cut
+
+sub color {
+    my ($self, $color) = @_;
+    if ( $color ) {
+	croak ("color: Color must be a 3 or 4 element vector")
+	  unless ref($color) && UNIVERSAL::isa($color,"ARRAY")
+	    && (@$color == 3 || @$color == 4);
+    }
+    $self->{color} = $color if $color;
+    $self->{color};
 }
 
 =head2 stringwidth
@@ -377,6 +427,26 @@ sub textwidth {
     $self->{textwidth};
 }
 
+=head2 char
+
+Example:
+
+    $char = $ts->char("quotedblleft");
+
+Returns a one-character string that will render as the named glyph in
+the current encoding, or C<undef> if this glyph is currently not
+encoded.
+
+This is a convenience method that calls the C<char> method of the
+associated FontMetrics object.
+
+=cut
+
+sub char {
+    my ($self, $glyph) = @_;
+    $self->metrics->char ($glyph);
+}
+
 ################ PostScript code builders ################
 
 # All ps_ routines return a printable PostScript string.
@@ -397,9 +467,8 @@ sub ps_preamble {
     my $self = shift;
     <<EOD;
 % TJ operator to print typesetinfo vectors.
-% Requires Fpt to be defined!
 /TJ {
-  { dup type /stringtype eq { show } { Fpt mul 0 rmoveto } ifelse }
+  { dup type /stringtype eq { show } { 0 rmoveto } ifelse }
   forall
 } bind def
 EOD
@@ -429,8 +498,10 @@ vector will be named I<prefix>C<Vec>.
 
 =item base
 
-The base encoding. This should be either C<StandardEncoding> (default)
-or C<ISOLatin1Encoding>.
+The base encoding. This should be either C<StandardEncoding> or
+C<ISOLatin1Encoding>. It defaults to the value supplied with a
+preceding C<reencode> call, or C<StandardEncoding> if no such call has
+been issued.
 
 =item vec
 
@@ -445,7 +516,7 @@ sub ps_reencodesub {
     my ($self) = shift;
 
     my %atts = ( name => "ReEncode",
-		 base => "AdobeStandardEncoding",
+		 base => $self->metrics->{tp_reencodebase} || "AdobeStandardEncoding",
 		 vec  => "embedded",
 		 @_);
 
@@ -580,19 +651,20 @@ Example:
 
     print $ts->ps_setfont;
 
-Produces the PostScript code to designate the current font and size
-for PostScript.
+Produces the PostScript code to designate the current font, size and
+color for PostScript.
 
 This method keeps track of the settings, and will not produce
 anything if the current settings are already as requested. Hence use
 liberally.
 
-Call with an explicit C<undef> argument to flush the cache.
+Call with an explicit C<undef> argument to flush the cache. This is
+only necessary when the PostScript code needs to maintain graphics
+state explicitly.
 
 =cut
 
 my $ps_curfont;
-my $ps_curFpt;
 
 sub ps_setfont {
     my $self = shift;
@@ -602,12 +674,68 @@ sub ps_setfont {
     croak ("ps_setfont: Font size not set") unless $size;
     if ( @_ && !defined shift ) {
 	undef $ps_curfont;
-	undef $ps_curFpt;
+	$self->ps_setcolor (undef);
+	return $ret;
     }
     unless ( $ps_curfont && $ps_curfont eq "$size $self->fontname" ) {
 	$ret .= sprintf ("/%s findfont %.3g scalefont setfont\n",
 			 $self->fontname, $size);
 	$ps_curfont = "$size $self->fontname";
+    }
+    $ret .= $self->ps_setcolor ($self->{color})
+      if $self->{color};
+
+    $ret;
+}
+
+=head2 ps_setcolor
+
+Example:
+
+    print $ts->ps_setcolor([0,0,0]);
+
+Produces the PostScript code to set the current PostScript color.
+If no arguments are passed, it sets the value for this typesetter.
+
+This method keeps track of the settings, and will not produce
+anything if the current settings are already as requested. Hence use
+liberally.
+
+Call with an explicit C<undef> argument to flush the cache. This is
+only necessary when the PostScript code needs to maintain graphics
+state explicitly.
+
+=cut
+
+my $ps_curcol;
+
+sub ps_setcolor {
+    my $self = shift;
+    my $color = $self->{color};
+    my $ret = '';
+    if ( @_ ) {
+	$color = shift;
+	if ( defined $color ) {
+	    croak ("color: Color must be a 3 or 4 element vector")
+	      unless ref($color) && UNIVERSAL::isa($color,"ARRAY")
+		&& (@$color == 3 || @$color == 4);
+	}
+	else {
+	    undef $ps_curcol;
+	    return $ret;
+	}
+    }
+    return $ret unless $color;
+    unless ( $ps_curcol
+	     && join(" ",@$ps_curcol) eq join(" ",$color) ) {
+	$ps_curcol = $color;
+	if ( @$color == 3 ) {
+	    $ret .= sprintf ("%.3f %.3f %.3f setrgbcolor\n", @$color);
+	}
+	else {
+	    $ret .= sprintf ("%.3f %.3f %.3f %.3f setcmykcolor\n",
+			     @$color);
+	}
     }
     $ret;
 }
@@ -632,14 +760,14 @@ sub ps_tj {
     my $ret = '';
     my $size = $self->{fontsize};
     croak ("ps_tj: Font size not set") unless $size;
-    unless ( $ps_curFpt && $ps_curFpt eq $size/FONTSCALE ) {
-	$ps_curFpt = $size/FONTSCALE;
-	$ret .= "/Fpt $ps_curFpt def\n";
-    }
+    my $scale = $size/FONTSCALE;
     $ret .= "[";
     my $l = 1;
     foreach ( @$t ) {
-	$_ = sprintf("%g", $_) unless /^\(/;
+	unless ( /^\(/ ) {
+	    $_ = sprintf("%.4f", $_*$scale);
+	    s/0+$//;
+	}
 	if ( ($l += length) >= 80 ) {
 	    $ret .= "\n ";
 	    $l = 1 + length;
@@ -648,6 +776,27 @@ sub ps_tj {
     }
     $ret .= "] TJ\n";
     $ret;
+}
+
+=head2 ps_linebreak
+
+Example:
+
+    print $ts->ps_linebreak (\$y);
+
+Produces the PostScript code to advance to the next logical line,
+advancing the value of C<$y>. The default operation is to decrement
+C<$y> with the value of C<$ts->lineskip>, but C<$tr->linebreak> may be
+called to install a different linebreak handler.
+
+=cut
+
+sub ps_linebreak {
+    my ($self, $yref) = @_;
+    my $code = $self->{linebreak};
+    return $code->($self, $yref) if $code;
+    $$yref -= $self->{lineskip};
+    '';
 }
 
 =head2 ps_textbox
@@ -659,14 +808,19 @@ Example:
 Produces the PostScript code to typeset a string, or a set of strings.
 
 The string will be printed starting at base postion C<$x> and C<$y>.
-If the string exceeds the width C<$w> a line wrap will occur.
+If the string exceeds the width C<$w> a line wrap will occur and the
+C<ps_linebreak> method of the typesetter is called.
+
 The first line will be indented with C<$xi>.
+
+C<ps_textbox> will take care of font changes and color settings, but
+will not affect the global settings.
 
 If C<$str> is a reference to an array, this array may contain a mix of
 strings, PostScript::BasicTypesetter objects, and array references
 (recursive). Each string is typeset according to the current
 typesetter; a typesetter object changes the current typesetter for the
-rest of the array. However, the lineskip value of the initial
+rest of the array. However, the linebreak handler of the initial
 typesetter is used for linewraps, regardless the typesetter currently
 in control.
 
@@ -683,7 +837,7 @@ flush left alignment.
 The method C<textwidth> will return the actual width of the text that
 was set. Note that this may be larger than the specified width of the
 text box, when the text contains unbreakable items larger than the
-width.
+desired width.
 
 Values for C<$align> are C<"l"> (default): flush left, C<"r">: flush
 right, C<"c">: centered, C<"j">: justified.
@@ -730,6 +884,7 @@ sub _ps_textbox {
     my $wd = $xi;		# accumulated width
     my $ret = '';		# accumulated output
     my $lskip = $cur0->lineskip; # line skip (fixed)
+    my $lbreak = $cur0->{linebreak};
     my $maxwidth = 0;		# max width of textbox
 
     # Setup global values for this font.
@@ -755,8 +910,17 @@ sub _ps_textbox {
 	my $nsp = 0;		# available space for stretching
 
 	# Discard possible leading/trailing space.
-	shift(@res) if $overflow && !ref($res[0]);
-	pop (@res) unless ref($res[-1]);
+	shift(@res) while $overflow && !ref($res[0]);
+
+	my $ts = $res[-1];
+	if ( ref($ts) && UNIVERSAL::isa($ts,PostScript::BasicTypesetter::) ) {
+	    pop(@res);
+	}
+	else {
+	    undef $ts;
+	}
+	pop (@res) until ref($res[-1]);
+	push (@res, $ts) if $ts;
 
 	foreach ( @res ) {
 	    if ( ref($_) ) {
@@ -796,9 +960,15 @@ sub _ps_textbox {
 	foreach $t ( @$tt ) {
 	    $cur = shift(@$t);
 	    next unless @$t;
-	    $ret .= $cur->ps_setfont;
+	    my $needsave = $cur->ps_setfont;
+	    if ( $needsave ) {
+		$ret .= "gsave\n";
+		$self->ps_setfont(undef);
+	    }
+	    $ret .= $needsave;
 	    $t = [map { ref($_) ? @$_ : $_*$stretch } @$t];
 	    $ret .= $cur->ps_tj ($t);
+	    $ret .= "currentpoint grestore moveto\n" if $needsave;
 	    $did++;
 	}
 	$did;
@@ -858,8 +1028,7 @@ sub _ps_textbox {
 	    # No. Fill what we have.
 	    if ( $flush->() ) {
 		# Advance to next line.
-		$y -= $lskip;
-
+		$ret .= $cur00->ps_linebreak(\$y);
 		# Reset.
 		@res = ();
 		$wd = 0;
@@ -904,7 +1073,13 @@ sub _ps_simpletextbox {
     my $y = ref($yy) ? $$yy : $yy;
 
     # Accumulated output.
-    my $ret = $self->ps_setfont();
+    my $ret = '';
+    my $needsave = $self->ps_setfont();
+    if ( $needsave ) {
+	$ret .= "gsave\n";
+	$self->ps_setfont(undef);
+    }
+    $ret .= $needsave;
 
     # Scaling for fill, only when justifying.
     my $scale = ($align eq 'j') ? FONTSCALE/$self->fontsize : 0;
@@ -940,7 +1115,7 @@ sub _ps_simpletextbox {
     # Subroutine code starts here.
 
     # Split into space-separated pieces (let's call them "words").
-    my @text = split (/\s+/, $t, -1);
+    my @text = split (/\s/, $t, -1);
     foreach my $str ( @text ) {
 	# Width of this "word".
 	my $w = $self->stringwidth($str);
@@ -949,11 +1124,11 @@ sub _ps_simpletextbox {
 	    # No -> flush what we have.
 	    $flush->();
 	    # Advance to next line.
-	    $y -= $lineskip;
+	    $ret .= $self->ps_linebreak(\$y);
 	    # Reset.
 	    @res = ();
-	    $wd = -$wspace;
 	    $xi = 0;
+	    $wd = -$wspace;
 	}
 	# It fits -> append.
 	$wd += $wspace + $w;
@@ -974,6 +1149,7 @@ sub _ps_simpletextbox {
     $$yy = $y if ref($yy);
     $$xxi = $xi if ref($xxi);
     $self->{textwidth} = $maxwidth;
+    $ret .= "currentpoint grestore moveto\n" if $needsave;
     $ret;
 }
 
@@ -1006,6 +1182,10 @@ __END__
 
     # Convert millimeters to PostScript units.
     sub mm { ($_[0] * 720) / 254 }
+
+=head1 SEE ALSO
+
+L<PostScript::Resources> and L<PostScript::FontMetrics>.
 
 =head1 AUTHOR
 
