@@ -1,9 +1,9 @@
-# RCS Status      : $Id: Font.pm,v 1.22 2003-10-23 14:12:43+02 jv Exp $
+# RCS Status      : $Id: Font.pm,v 1.22 2003-10-23 14:12:43+02 jv Exp jv $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Thu Oct 23 14:12:41 2003
-# Update Count    : 463
+# Last Modified On: Wed Feb 11 18:45:49 2004
+# Update Count    : 464
 # Status          : Released
 
 ################ Module Preamble ################
@@ -152,6 +152,7 @@ sub _loadfont ($) {
     print STDERR ("$fn: Loading font file\n") if $self->{verbose};
 
     # Read in the font data.
+    binmode($fh);		# (Some?) Windows need this
     my $len = 0;
     while ( $fh->sysread ($data, 32768, $len) > 0 ) {
 	$len = length ($data);

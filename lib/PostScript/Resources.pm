@@ -1,4 +1,4 @@
-# RCS Status      : $Id: Resources.pm,v 1.11 2003-10-23 14:11:54+02 jv Exp $# Author          : Johan Vromans
+# RCS Status      : $Id: Resources.pm,v 1.12 2004-12-18 17:40:52+01 jv Exp $# Author          : Johan Vromans
 # Created On      : Januari 1999
 # Last Modified By: Johan Vromans
 # Last Modified On: Thu Oct 23 14:11:52 2003
@@ -283,7 +283,7 @@ sub _loadFontAFM ($) {
 
 	# PostScriptName=the/file.afm
 	if ( $line =~ /^([^=]+)=(.*)$/ ) {
-	    $afm->{$1} = $rscidx.$2;
+	    $afm->{$1} = $rscidx.$2 unless $afm->{$1};
 	    next;
 	}
 	warn ($fn, "[$.]: Invalid FontAFM entry\n")
@@ -330,7 +330,7 @@ sub _loadFontOutline ($) {
 
 	# PostScriptName=the/file.pfa
 	if ( $line =~ /^([^=]+)=(.*)$/ ) {
-	    $pfa->{$1} = $rscidx.$2;
+	    $pfa->{$1} = $rscidx.$2 unless $pfa->{$1};
 	    next;
 	}
 	warn ($fn, "[$.]: Invalid FontOutline entry\n")

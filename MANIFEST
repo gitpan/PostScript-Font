@@ -33,3 +33,4 @@ examples/time0000.afm
 examples/time0003.afm
 examples/okay.ps
 perl-PostScript-Font.spec
+META.yml                                 Module meta-data (added by MakeMaker)

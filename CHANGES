@@ -1,3 +1,17 @@
+Version 1.10
+------------
+
+  * Fixed priority of entries in PS_RESOURCESPATH. Thanks to Michael
+    Piotrowski for finding this.
+
+Version 1.09
+------------
+
+  * Fixed a leak in resources (open file handles) when using True Type
+    fonts.
+
+  * Add WinANSIEncoding.
+
 Version 1.08
 ------------
 

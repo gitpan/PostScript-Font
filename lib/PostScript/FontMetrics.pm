@@ -1,9 +1,9 @@
-# RCS Status      : $Id: FontMetrics.pm,v 1.24 2003-10-23 14:12:17+02 jv Exp $
+# RCS Status      : $Id: FontMetrics.pm,v 1.24 2003-10-23 14:12:17+02 jv Exp jv $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Thu Oct 23 14:12:12 2003
-# Update Count    : 466
+# Last Modified On: Fri Apr  9 12:23:39 2004
+# Update Count    : 469
 # Status          : Released
 
 ################ Module Preamble ################
@@ -96,7 +96,7 @@ sub _loadafm ($) {
 
     # Read in the afm data.
     my $len = 0;
-
+    binmode($fh);		# (Some?) Windows need this
     unless ( ($len = $fh->sysread ($data, 4, 0)) == 4 ) {
 	$self->_die("$fn: Expecting $sz bytes, got $len bytes\n");
     }
@@ -197,8 +197,10 @@ sub _getwidthdata {
     foreach ( split (/\n/, $self->{data}) ) {
 	if ( /^StartCharMetrics/ .. /^EndCharMetrics/ ) {
 	    # Only lines that start with "C" or "CH" are parsed.
-	    next unless /^CH?\s+(-?\d+)\s*;/;
+	    # C nn, C -1 or C <HH> (two hexits).
+	    next unless /^CH?\s+(-?\d+|<[0-9a-f]+>)\s*;/i;
 	    my $ix = $1;
+	    $ix = hex($1) if $1 =~ /^<(.+)>$/;
 	    my ($name) = /\bN\s+(\.?\w+(?:-\w+)?)\s*;/;
 	    my ($wx)   = /\bWX\s+(\d+)\s*;/;
 	    $wx{$name} = $wx;
