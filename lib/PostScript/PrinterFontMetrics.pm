@@ -1,9 +1,9 @@
-# RCS Status      : $Id: PrinterFontMetrics.pm,v 1.1 2001-04-13 16:35:04+02 jv Exp $
+# RCS Status      : $Id: PrinterFontMetrics.pm,v 1.2 2001-06-14 12:32:23+02 jv Exp $
 # Author          : Andrew Ford
 # Created On      : March 2001
-# Last Modified By: Andrew Ford
-# Last Modified On: 
-# Update Count    : 1
+# Last Modified By: Johan Vromans
+# Last Modified On: Thu Jun 14 12:32:12 2001
+# Update Count    : 4
 # Status          : Development
 
 ################ Module Preamble ################
@@ -20,7 +20,7 @@ use IO;
 use File::Spec;
 
 use vars qw($VERSION @ISA $AUTOLOAD);
-$VERSION = "0.03";
+$VERSION = "0.04";
 @ISA = qw(PostScript::FontMetrics);
 
 # Definitions of the PFM file layout
@@ -338,6 +338,7 @@ sub _pfm_kerndata {
 
 
 sub AUTOLOAD {
+    return if $AUTOLOAD =~ /::DESTROY$/;
     die "Undefined subroutine $AUTOLOAD" 
       unless exists $pfm_field_map{$AUTOLOAD};
     my $struct = &{$pfm_field_map{$AUTOLOAD}};
