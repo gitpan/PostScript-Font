@@ -1,15 +1,15 @@
 # BasicTypesetter.pm --  Module for basic PostScript typesetting
-# RCS Info        : $Id: BasicTypesetter.pm,v 1.15 2001-04-13 16:43:54+02 jv Exp $
+# RCS Info        : $Id: BasicTypesetter.pm,v 1.16 2001-04-14 12:46:04+02 jv Exp $
 # Author          : Johan Vromans
 # Created On      : Sun Jun 18 11:40:12 2000
 # Last Modified By: Johan Vromans
-# Last Modified On: Fri Apr 13 13:43:49 2001
-# Update Count    : 555
+# Last Modified On: Sat Apr 14 12:45:46 2001
+# Update Count    : 556
 # Status          : Unknown, Use with caution!
 
 package PostScript::BasicTypesetter;
 
-$VERSION = "1.01";
+$VERSION = "0.02";
 
 use 5.005;
 use strict;

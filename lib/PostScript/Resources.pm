@@ -1,8 +1,8 @@
-# RCS Status      : $Id: Resources.pm,v 1.8 2000-11-15 14:50:14+01 jv Exp $# Author          : Johan Vromans
+# RCS Status      : $Id: Resources.pm,v 1.9 2001-04-14 12:45:19+02 jv Exp $# Author          : Johan Vromans
 # Created On      : Januari 1999
 # Last Modified By: Johan Vromans
-# Last Modified On: Wed Nov 15 14:46:55 2000
-# Update Count    : 183
+# Last Modified On: Sat Apr 14 12:44:57 2001
+# Update Count    : 185
 # Status          : Released
 
 ################ Module Preamble ################
@@ -18,7 +18,7 @@ use File::Basename;
 use File::Spec;
 
 use vars qw($VERSION);
-$VERSION = "1.01";
+$VERSION = "1.02";
 
 my $ResourcePath = ".";		# default standard resource path
 my $defupr = "PSref.upr";	# principal resource file
@@ -359,11 +359,11 @@ __END__
 
 =head1 NAME
 
-PostScript::FontResources - module to fetch data from Unix PostScript Resource 'C<.upr>' files
+PostScript::Resources - module to fetch data from Unix PostScript Resource 'C<.upr>' files
 
 =head1 SYNOPSIS
 
-  my $rsc = new PostScript::FontResources (options);
+  my $rsc = new PostScript::Resources (options);
   print STDOUT $rsc->FontAFM ("Times-Roman"), "\n";
 
 =head1 DESCRIPTION
