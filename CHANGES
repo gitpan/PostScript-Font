@@ -1,3 +1,8 @@
+Version 1.02
+------------
+
+  * PostScript::Font: Add FontBBox method.
+
 Version 1.01
 ------------
 

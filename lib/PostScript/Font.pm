@@ -1,9 +1,9 @@
-# RCS Status      : $Id: Font.pm,v 1.13 2000-02-04 10:32:30+01 jv Exp $
+# RCS Status      : $Id: Font.pm,v 1.14 2000-05-07 13:21:38+02 jv Exp $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Fri Feb  4 10:23:08 2000
-# Update Count    : 362
+# Last Modified On: Sun May  7 13:21:16 2000
+# Update Count    : 368
 # Status          : Released
 
 ################ Module Preamble ################
@@ -156,6 +156,7 @@ sub ItalicAngle	{ $_[0]->{italic};    }
 sub isFixedPitch{ $_[0]->{fixed};     }
 sub Weight	{ $_[0]->{weight};    }
 sub FontMatrix	{ $_[0]->{fontmatrix};}
+sub FontBBox	{ $_[0]->{fontbbox};  }
 sub DataFormat  { $_[0]->{format};    }
 
 sub FontGlyphs {
@@ -297,6 +298,9 @@ sub _loadfont ($) {
     }
     if ( $$data =~ /\/FontMatrix\s*\[\s*(\d+(?:\.\d*)?)\s+(\d+(?:\.\d*)?)\s+(\d+(?:\.\d*)?)\s+(\d+(?:\.\d*)?)\s+(\d+(?:\.\d*)?)\s+(\d+(?:\.\d*)?)\s*\]/ ) {
 	$self->{fontmatrix} = [$1,$2,$3,$4,$5,$6];
+    }
+    if ( $$data =~ /\/FontBBox\s*\{\s*(-?\d+(?:\.\d*)?)\s+(-?\d+(?:\.\d*)?)\s+(-?\d+(?:\.\d*)?)\s+(-?\d+(?:\.\d*)?)\s*\}/ ) {
+	$self->{fontbbox} = [$1,$2,$3,$4];
     }
     $self;
 }
@@ -695,6 +699,10 @@ The font matrix as a reference to an anonymous array with the 6 values.
 To find the font scale, use
 
     int(1/$font->FontMatrix->[0])
+
+=item FontBBox
+
+The font bounding box as a reference to an anonymous array with the 4 values.
 
 =item DataFormat
 
