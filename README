@@ -79,6 +79,12 @@ Programs:
 			The input format may be any type that
 			PostScript::Font can deal with.
 
+   ttfwrapper	      - wraps a True Type font in PostScript Type42 format.
+
+		        This functionality is also provided by
+		        font2pfa, but ttfwrapper can also write the
+		        corresponding metrics (AFM) files.
+			
 To install, unpack the archive, change to the unpacked directory, and
 type:
 
@@ -86,18 +92,17 @@ type:
     make all test
     make install
 
+REQUIREMENTS
+
+For TrueType font handling, the CPAN package Font::TTF must be
+installed. 
+
 AVAILABILITY
 
 (web-page) http://www.squirrel.nl/people/jvromans/software.html
 (search)   http://search.cpan.org/search?module=PostScript%3A%3AFont
 (download) http://www.perl.com/CPAN/authors/id/JV/
            Archive name: PostScript-Font-x.xx.tar.gz
-
-For a TrueType to Type42 conversion tool, see 
-           http://ftp.giga.or.at/pub/nih/ttftot42
-ttftot42 requires the FreeType font library, see
-	   http://www.freetype.org
-Please use freetype version 1.3 or newer.
 
 ----------------------------------------------------------------------------
 Johan Vromans                                           jvromans@squirrel.nl

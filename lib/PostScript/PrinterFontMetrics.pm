@@ -1,9 +1,9 @@
-# RCS Status      : $Id: PrinterFontMetrics.pm,v 1.5 2002-12-24 18:56:48+01 jv Exp $
+# RCS Status      : $Id: PrinterFontMetrics.pm,v 1.7 2003-10-23 14:12:04+02 jv Exp $
 # Author          : Andrew Ford
 # Created On      : March 2001
 # Last Modified By: Johan Vromans
-# Last Modified On: Tue Dec 24 18:56:42 2002
-# Update Count    : 43
+# Last Modified On: Thu Oct 23 14:12:02 2003
+# Update Count    : 45
 # Status          : Development
 
 ################ Module Preamble ################
@@ -16,11 +16,11 @@ use Data::Dumper;
 
 BEGIN { require 5.005; }
 
-use IO;
+use IO qw(File);
 use File::Spec;
 
 use vars qw($VERSION @ISA $AUTOLOAD);
-$VERSION = "0.07";
+$VERSION = "0.08";
 
 use PostScript::FontMetrics;
 use PostScript::StandardEncoding;

@@ -1,8 +1,8 @@
-# RCS Status      : $Id: Resources.pm,v 1.9 2001-04-14 12:45:19+02 jv Exp $# Author          : Johan Vromans
+# RCS Status      : $Id: Resources.pm,v 1.11 2003-10-23 14:11:54+02 jv Exp $# Author          : Johan Vromans
 # Created On      : Januari 1999
 # Last Modified By: Johan Vromans
-# Last Modified On: Sat Apr 14 12:44:57 2001
-# Update Count    : 185
+# Last Modified On: Thu Oct 23 14:11:52 2003
+# Update Count    : 187
 # Status          : Released
 
 ################ Module Preamble ################
@@ -13,12 +13,12 @@ use strict;
 
 BEGIN { require 5.005; }
 
-use IO;
+use IO qw(File);
 use File::Basename;
 use File::Spec;
 
 use vars qw($VERSION);
-$VERSION = "1.02";
+$VERSION = "1.03";
 
 my $ResourcePath = ".";		# default standard resource path
 my $defupr = "PSref.upr";	# principal resource file

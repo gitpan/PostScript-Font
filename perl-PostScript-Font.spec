@@ -1,7 +1,7 @@
 Summary: PostScript::Font analyzes PostScript fonts
 %define module PostScript-Font
 Name: perl-%{module}
-Version: 1.08
+Version: 1.09
 Release: 1
 Source: %{module}-%{version}.tar.gz
 Copyright: Artistic

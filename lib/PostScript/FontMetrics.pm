@@ -1,9 +1,9 @@
-# RCS Status      : $Id: FontMetrics.pm,v 1.22 2002-12-24 17:48:40+01 jv Exp $
+# RCS Status      : $Id: FontMetrics.pm,v 1.24 2003-10-23 14:12:17+02 jv Exp $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Tue Dec 24 17:06:46 2002
-# Update Count    : 464
+# Last Modified On: Thu Oct 23 14:12:12 2003
+# Update Count    : 466
 # Status          : Released
 
 ################ Module Preamble ################
@@ -15,11 +15,11 @@ use Carp;
 
 BEGIN { require 5.005; }
 
-use IO;
+use IO qw(File);
 use File::Spec;
 
 use vars qw($VERSION);
-$VERSION = "1.05";
+$VERSION = "1.06";
 
 use constant FONTSCALE => 1000;		# normal value for font design
 

@@ -1,9 +1,9 @@
-# RCS Status      : $Id: TTtoType42.pm,v 1.6 2002-12-24 17:50:40+01 jv Exp $
+# RCS Status      : $Id: TTtoType42.pm,v 1.8 2003-10-23 14:12:56+02 jv Exp $
 # Author          : Johan Vromans
 # Created On      : Mon Dec 16 18:56:03 2002
 # Last Modified By: Johan Vromans
-# Last Modified On: Mon Dec 23 13:50:02 2002
-# Update Count    : 176
+# Last Modified On: Thu Oct 23 14:12:54 2003
+# Update Count    : 186
 # Status          : Released
 
 ################ Module Preamble ################
@@ -15,7 +15,7 @@ use 5.006;
 use strict;
 use warnings;
 
-our $VERSION = "0.02";
+our $VERSION = "0.03";
 
 use base qw(Font::TTF::Font);
 
@@ -424,6 +424,12 @@ sub afm_as_string {
     $ret .= "EndFontMetrics\n";
 
     \$ret;
+}
+
+# Font::TTF::Font uses cyclic structures, so we need this.
+sub DESTROY {
+    my $self = shift;
+    $self->release;
 }
 
 ################ Internal routines ################

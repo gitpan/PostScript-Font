@@ -1,9 +1,9 @@
-# RCS Status      : $Id: FontInfo.pm,v 1.10 2002-12-24 18:51:19+01 jv Exp $
+# RCS Status      : $Id: FontInfo.pm,v 1.12 2003-10-23 14:12:27+02 jv Exp $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Tue Dec 24 18:51:13 2002
-# Update Count    : 55
+# Last Modified On: Thu Oct 23 14:12:25 2003
+# Update Count    : 57
 # Status          : Released
 
 ################ Module Preamble ################
@@ -14,10 +14,10 @@ use strict;
 
 BEGIN { require 5.005; }
 
-use IO;
+use IO qw(File);
 
 use vars qw($VERSION);
-$VERSION = "1.04";
+$VERSION = "1.05";
 
 sub new {
     my $class = shift;
