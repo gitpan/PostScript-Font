@@ -1,11 +1,11 @@
 #!/usr/local/bin/perl
-my $RCS_Id = '$Id: fontsampler.pl,v 1.12 1999-09-24 15:14:06+02 jv Exp $ ';
+my $RCS_Id = '$Id: fontsampler.pl,v 1.13 1999-09-24 18:37:28+02 jv Exp $ ';
 
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Fri Sep 24 15:11:23 1999
-# Update Count    : 410
+# Last Modified On: Fri Sep 24 18:20:05 1999
+# Update Count    : 411
 # Status          : Unknown, Use with caution!
 
 ################ Common stuff ################
@@ -386,7 +386,9 @@ A descriptive title that is printed on top of each page.
 
 =item B<->[B<no>]B<include>
 
-When enabled, the font definitions are inserted in the PostScript output. This results in a self-contained PostScript document that can be printed directly.
+When enabled, the font definitions are inserted in the PostScript
+output. This results in a self-contained PostScript document that can
+be printed directly.
 
 When disabled, DSC comments are inserted in the output that need to be
 processed by a suitable print manager (unless all fonts are resident

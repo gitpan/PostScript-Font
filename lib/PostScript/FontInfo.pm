@@ -1,9 +1,9 @@
-# RCS Status      : $Id: FontInfo.pm,v 1.4 1999-09-24 15:24:45+02 jv Exp $
+# RCS Status      : $Id: FontInfo.pm,v 1.6 1999-10-19 21:34:06+02 jv Exp $
 # Author          : Johan Vromans
 # Created On      : December 1999
 # Last Modified By: Johan Vromans
-# Last Modified On: Fri Sep 24 14:54:40 1999
-# Update Count    : 38
+# Last Modified On: Tue Oct 19 21:33:17 1999
+# Update Count    : 41
 # Status          : Looks okay
 
 ################ Module Preamble ################
@@ -17,7 +17,7 @@ BEGIN { require 5.005; }
 use IO;
 
 use vars qw($VERSION);
-$VERSION = "1.00_01";
+$VERSION = "1.00_02";
 
 my $trace;
 my $verbose;
@@ -114,6 +114,21 @@ PostScript::FontInfo - module to fetch data from PostScript font C<.inf> files
   my $info = new PostScript::FontInfo (filename, options);
   print STDOUT ("Name = ", $info->name, "\n");
 
+=head1 DESCRIPTION
+
+This package allows font info files, so called C<.inf> files, to be
+read and (partly) parsed.
+
+=head1 CONSTRUCTOR
+
+=over 4
+
+=item new ( FILENAME [ , OPTIONS ] )
+
+The constructor will read the file and parse its contents.
+
+=back
+
 =head1 OPTIONS
 
 =over 4
@@ -131,20 +146,10 @@ Prints verbose info if I<value> is true.
 
 Prints tracing info if I<value> is true.
 
-=back
+=item debug => I<value>
 
-=head1 DESCRIPTION
-
-This package allows font info files, so called C<.inf> files, to be
-read and (partly) parsed.
-
-=head1 CONSTRUCTOR
-
-=over 4
-
-=item new ( FILENAME )
-
-The constructor will read the file and parse its contents.
+Prints debugging info if I<value> is true.
+Implies 'trace' and 'verbose'.
 
 =back
 
