@@ -1,3 +1,8 @@
+Version 1.10.01
+---------------
+
+  * Fixed test basic so it succeeds on Windows.
+
 Version 1.10
 ------------
 

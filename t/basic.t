@@ -6,8 +6,8 @@ print "1..9\n";
 # Author          : Johan Vromans
 # Created On      : Thu May 13 15:59:04 1999
 # Last Modified By: Johan Vromans
-# Last Modified On: Sat Oct 30 19:00:02 1999
-# Update Count    : 200
+# Last Modified On: Sat Jun  5 17:26:27 2010
+# Update Count    : 204
 # Status          : Unknown, Use with caution!
 
 ################ Common stuff ################
@@ -65,11 +65,12 @@ my $TMPDIR = $ENV{TMPDIR} || '/usr/tmp';
 ################ The Process ################
 
 chdir ("examples") or die ("chdir");
-open (OUT, ">out.ps");
+# Prevent CR/LF problems on Windows.
+open (OUT, ">:raw", "out.ps");
 print "ok 2\n";
 
 # Load the UPR file(s).
-my $psres = new PostScript::Resources;
+my $psres = new PostScript::Resources(path => ".");
 
 print "ok 3\n";
 
@@ -90,7 +91,7 @@ my $metricsfile = $psres->FontAFM ($fontname);
 unless ( defined $metricsfile ) {
     # If it is a True Type font, we can use the Outline to get at the metrics.
     $metricsfile = $fontfile
-      if $fontinfo->Type eq 't';
+      if $fontinfo->FontType eq 't';
 }
 die ("No font metrics info for $fontname\n") unless defined $metricsfile;
 print "ok 6\n";
