@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl -w
-my $RCS_Id = '$Id: example.pl,v 1.3 1999-10-30 19:01:26+02 jv Exp $ ';
+my $RCS_Id = '$Id: example.pl,v 1.3 1999/10/30 17:01:26 jv Exp $ ';
 
 # Author          : Johan Vromans
 # Created On      : Thu May 13 15:59:04 1999

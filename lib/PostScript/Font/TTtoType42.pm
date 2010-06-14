@@ -1,9 +1,9 @@
-# RCS Status      : $Id: TTtoType42.pm,v 1.8 2003-10-23 14:12:56+02 jv Exp $
+# RCS Status      : $Id: TTtoType42.pm,v 1.12 2007-10-11 11:47:17+02 jv Exp $
 # Author          : Johan Vromans
 # Created On      : Mon Dec 16 18:56:03 2002
 # Last Modified By: Johan Vromans
-# Last Modified On: Thu Oct 23 14:12:54 2003
-# Update Count    : 186
+# Last Modified On: Thu Oct 11 11:47:15 2007
+# Update Count    : 196
 # Status          : Released
 
 ################ Module Preamble ################
@@ -15,7 +15,7 @@ use 5.006;
 use strict;
 use warnings;
 
-our $VERSION = "0.03";
+our $VERSION = "0.04";
 
 use base qw(Font::TTF::Font);
 
@@ -63,11 +63,18 @@ sub as_string {
     $version = sprintf("%07.3f", $1) if $version =~ /(\d+\.\d+)/;
 
     # Font bounding box.
+    # Some fonts have dimensions that are 1000 times too small. Let's
+    # do some auto-sensing.
+    my $fix = 1;
     my $scale = do {
 	my $u = $head->{unitsPerEm};
-	sub {int($_[0] * 1000 / $u)}
+	sub {int($_[0] * $fix / $u)}
     };
     my @bb = map { $scale->($head->{$_}) } qw(xMin yMin xMax yMax);
+    if ( !$bb[0] || !$bb[1] || !$bb[2] || !$bb[3] ) {
+	$fix = 1000;
+	@bb = map { $scale->($head->{$_}) } qw(xMin yMin xMax yMax);
+    }
 
     # Glyph table.
     my $glyphs = $self->glyphs;
@@ -261,11 +268,18 @@ sub afm_as_string {
     $version = sprintf("%07.3f", $1) if $version =~ /(\d+\.\d+)/;
 
     # Font bounding box.
+    # Some fonts have dimensions that are 1000 times too small. Let's
+    # do some auto-sensing.
+    my $fix = 1;
     my $scale = do {
 	my $u = $head->{unitsPerEm};
-	sub {int($_[0] * 1000 / $u)}
+	sub {int($_[0] * $fix / $u)}
     };
     my @bb = map { $scale->($head->{$_}) } qw(xMin yMin xMax yMax);
+    if ( !$bb[0] || !$bb[1] || !$bb[2] || !$bb[3] ) {
+	$fix = 1000;
+	@bb = map { $scale->($head->{$_}) } qw(xMin yMin xMax yMax);
+    }
 
     # Glyph table.
     my $glyphs = $self->glyphs;
@@ -387,36 +401,38 @@ sub afm_as_string {
 
     #### Kerning Data
 
-    $ret .= "StartKernData\n";
-    ### $ret .= "StartTrackKern\n";
-    ### $ret .= "EndTrackKern\n";
+    if ( $self->{kern} ) {
+	$ret .= "StartKernData\n";
+	### $ret .= "StartTrackKern\n";
+	### $ret .= "EndTrackKern\n";
 
-    my $kern = $self->{kern}->read;
-    my $nkern = 0;
+	my $kern = $self->{kern}->read;
+	my $nkern = 0;
 
-    # Gather the contents of all the kern tables in a single hash.
-    my %k;
-    foreach my $table ( @{$kern->{tables}} ) {
-	my $kerns = $table->{kern};
-	foreach my $left ( keys %$kerns ) {
-	    foreach my $right ( keys %{$kerns->{$left}} ) {
-		$k{$glyphs->[$left]}{$glyphs->[$right]} =
-		  $kerns->{$left}{$right};
-		$nkern++;
+	# Gather the contents of all the kern tables in a single hash.
+	my %k;
+	foreach my $table ( @{$kern->{tables}} ) {
+	    my $kerns = $table->{kern};
+	    foreach my $left ( keys %$kerns ) {
+		foreach my $right ( keys %{$kerns->{$left}} ) {
+		    $k{$glyphs->[$left]}{$glyphs->[$right]} =
+		      $scale->($kerns->{$left}{$right});
+		    $nkern++;
+		}
 	    }
 	}
-    }
 
-    # Now print the hash, sorted.
-    $ret .= "StartKernPairs $nkern\n";
-    foreach my $left ( sort keys %k ) {
-	foreach my $right ( sort keys %{$k{$left}} ) {
-	    $ret .= "KPX $left $right " . $k{$left}{$right} . "\n";
+	# Now print the hash, sorted.
+	$ret .= "StartKernPairs $nkern\n";
+	foreach my $left ( sort keys %k ) {
+	    foreach my $right ( sort keys %{$k{$left}} ) {
+		$ret .= "KPX $left $right " . $k{$left}{$right} . "\n";
+	    }
+	    $ret .= "\n";
 	}
-	$ret .= "\n";
+	$ret .= "EndKernPairs\n";
+	$ret .= "EndKernData\n";
     }
-    $ret .= "EndKernPairs\n";
-    $ret .= "EndKernData\n";
 
     ### $ret .= "StartComposites\n";
     ### $ret .= "EndComposites\n";

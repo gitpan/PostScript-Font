@@ -2,7 +2,7 @@
 
 # btexample.pl -- Demo of BasicTypesetter module.
 
-# RCS Info        : $Id: btexample.pl,v 1.5 2000-07-02 12:11:49+02 jv Exp $
+# RCS Info        : $Id: btexample.pl,v 1.5 2000/07/02 10:11:49 jv Exp $
 # Author          : Johan Vromans
 # Created On      : Tue Jun 20 19:23:58 2000
 # Last Modified By: Johan Vromans

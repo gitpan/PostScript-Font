@@ -1,9 +1,9 @@
-# RCS Status      : $Id: Font.pm,v 1.22 2003-10-23 14:12:43+02 jv Exp jv $
+# RCS Status      : $Id: Font.pm,v 1.23 2005-06-10 22:56:37+02 jv Exp jv $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Wed Feb 11 18:45:49 2004
-# Update Count    : 464
+# Last Modified On: Wed Dec  6 13:38:31 2006
+# Update Count    : 466
 # Status          : Released
 
 ################ Module Preamble ################
@@ -163,7 +163,7 @@ sub _loadfont ($) {
       unless length($data) >= 4;
 
     $self->{dataformat} = 'ps';
-    if ( substr($data,0,4) eq "\0\1\0\0" ) {
+    if ( substr($data,0,4) eq "\0\1\0\0" || substr($data, 0, 4) eq "OTTO" ) {
 	# For the time being, Font::TTF is optional. Be careful.
 	eval {
 	    require PostScript::Font::TTtoType42;

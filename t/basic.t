@@ -6,7 +6,7 @@ print "1..9\n";
 # Author          : Johan Vromans
 # Created On      : Thu May 13 15:59:04 1999
 # Last Modified By: Johan Vromans
-# Last Modified On: Sat Jun  5 17:26:27 2010
+# Last Modified On: Mon Jun 14 08:36:25 2010
 # Update Count    : 204
 # Status          : Unknown, Use with caution!
 
@@ -66,7 +66,8 @@ my $TMPDIR = $ENV{TMPDIR} || '/usr/tmp';
 
 chdir ("examples") or die ("chdir");
 # Prevent CR/LF problems on Windows.
-open (OUT, ">:raw", "out.ps");
+open (OUT, ">out.ps");
+binmode(OUT);			# avoid CRLF/NL problems
 print "ok 2\n";
 
 # Load the UPR file(s).

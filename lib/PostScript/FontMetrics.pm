@@ -1,9 +1,9 @@
-# RCS Status      : $Id: FontMetrics.pm,v 1.24 2003-10-23 14:12:17+02 jv Exp jv $
+# RCS Status      : $Id: FontMetrics.pm,v 1.25 2005-06-10 22:56:21+02 jv Exp $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Fri Apr  9 12:23:39 2004
-# Update Count    : 469
+# Last Modified On: Fri Jun 10 19:00:43 2005
+# Update Count    : 479
 # Status          : Released
 
 ################ Module Preamble ################
@@ -190,6 +190,9 @@ sub _getwidthdata {
 		$self->{encodingvector} = [];
 	    }
 	}
+	else {
+	    $self->{encodingvector} = [];
+	}
     }
     my $enc = $self->{encodingvector};
     my $nglyphs = 0;
@@ -245,15 +248,19 @@ sub _getbboxdata {
 sub _getkerndata {
     my $self = shift;
     local ($_);
+    my $k = 0;
     my %kern;
     foreach ( split (/\n/, $self->{data}) ) {
-	if ( /^StartKernData/ .. /^EndKernData/ ) {
+	if ( /^StartKern(Data|Pairs)/ .. /^EndKern(Data|Pairs)/ ) {
 	    next unless /^KPX\s+(\S+)\s+(\S+)\s+(-?\d+)/;
 	    $kern{$1,$2} = $3;
+	    $k++;
 	}
 	last if /^EndFontMetrics/;
     }
     ${kern}{'.notdef','.notdef'} = 0 unless %kern;
+    print STDERR ($self->FileName, ": Number of kern pairs = $k\n")
+      if $self->{verbose};
     $self->{Kern} = \%kern;
     $self;
 }

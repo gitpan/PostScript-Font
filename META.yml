@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                PostScript-Font
-version:             1.10.01
+version:             1.10.02
 abstract:            Modules to get info for/from PostScript fonts
 license:             ~
 author:              

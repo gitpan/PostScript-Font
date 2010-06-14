@@ -1,4 +1,4 @@
-# RCS Status      : $Id: Resources.pm,v 1.12 2004-12-18 17:40:52+01 jv Exp $# Author          : Johan Vromans
+# RCS Status      : $Id: Resources.pm,v 1.12 2004/12/18 16:40:52 jv Exp $# Author          : Johan Vromans
 # Created On      : Januari 1999
 # Last Modified By: Johan Vromans
 # Last Modified On: Thu Oct 23 14:11:52 2003
