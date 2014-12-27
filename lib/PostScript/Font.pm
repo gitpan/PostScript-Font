@@ -1,9 +1,9 @@
-# RCS Status      : $Id: Font.pm,v 1.23 2005-06-10 22:56:37+02 jv Exp jv $
+# RCS Status      : $Id: Font.pm,v 1.25 2014/12/27 20:35:14 jv Exp $
 # Author          : Johan Vromans
 # Created On      : December 1998
 # Last Modified By: Johan Vromans
-# Last Modified On: Wed Dec  6 13:38:31 2006
-# Update Count    : 466
+# Last Modified On: Sat Dec 27 21:35:02 2014
+# Update Count    : 468
 # Status          : Released
 
 ################ Module Preamble ################
@@ -20,7 +20,7 @@ use PostScript::StandardEncoding;
 use PostScript::ISOLatin1Encoding;
 
 use vars qw($VERSION);
-$VERSION = "1.04";
+$VERSION = "1.05";
 
 # If you have the t1disasm program, have $t1disasm point to it.
 # This speeds up the glyph fetching.
@@ -782,7 +782,7 @@ Johan Vromans, Squirrel Consultancy <jvromans@squirrel.nl>
 
 =head1 COPYRIGHT and DISCLAIMER
 
-This program is Copyright 2000,1998 by Squirrel Consultancy. All
+This program is Copyright 2014,2000,1998 by Squirrel Consultancy. All
 rights reserved.
 
 This program is free software; you can redistribute it and/or modify
